@@ -12,6 +12,10 @@
   let showCompleted = false;
   let searchQuery = '';
   let token: string | null = null;
+  let recentlyCompletedIds = new Set<string>();
+  let completionTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+
+  const COMPLETION_DISPLAY_MS = 1100;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -49,9 +53,34 @@
     try {
       const updated = await api.updateTask(token, task.id, { completed: nextCompleted });
       tasks = tasks.map((item) => (item.id === updated.id ? updated : item));
+      if (nextCompleted) {
+        markRecentlyCompleted(task.id);
+      } else {
+        clearRecentlyCompleted(task.id);
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to update task.';
     }
+  }
+
+  function markRecentlyCompleted(taskId: string) {
+    recentlyCompletedIds = new Set([...recentlyCompletedIds, taskId]);
+    if (completionTimers[taskId]) {
+      clearTimeout(completionTimers[taskId]);
+    }
+    completionTimers[taskId] = setTimeout(() => {
+      clearRecentlyCompleted(taskId);
+    }, COMPLETION_DISPLAY_MS);
+  }
+
+  function clearRecentlyCompleted(taskId: string) {
+    if (completionTimers[taskId]) {
+      clearTimeout(completionTimers[taskId]);
+      delete completionTimers[taskId];
+    }
+    const next = new Set(recentlyCompletedIds);
+    next.delete(taskId);
+    recentlyCompletedIds = next;
   }
 
   $: sortedTasks = [...tasks].sort(
@@ -59,7 +88,8 @@
   );
 
   $: filteredTasks = sortedTasks.filter((task) => {
-    if (!showCompleted && task.completed) {
+    const isRecentlyCompleted = recentlyCompletedIds.has(task.id);
+    if (!showCompleted && task.completed && !isRecentlyCompleted) {
       return false;
     }
 
@@ -114,11 +144,15 @@
       </div>
     {:else}
       {#each filteredTasks as task}
-          <div class="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-            <div>
-              <div class="flex items-center gap-2 text-sm text-slate-900">
-                <button
-                  type="button"
+        <div
+          class={`flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition ${
+            recentlyCompletedIds.has(task.id) && !showCompleted ? 'task-fade' : ''
+          }`}
+        >
+          <div>
+            <div class="flex items-center gap-2 text-sm text-slate-900">
+              <button
+                type="button"
                   class={`inline-flex h-6 w-6 items-center justify-center rounded-full border transition ${
                     task.completed
                       ? 'border-emerald-400 bg-emerald-100 text-emerald-600'
@@ -129,7 +163,11 @@
                 >
                   {task.completed ? '✓' : ''}
                 </button>
-                <span class={task.completed ? 'text-slate-400 line-through' : ''}>
+                <span
+                  class={`${
+                    task.completed ? 'text-slate-400 task-complete' : ''
+                  } ${recentlyCompletedIds.has(task.id) ? 'task-strike' : ''}`}
+                >
                   {task.text || 'Untitled task'}
                 </span>
               </div>

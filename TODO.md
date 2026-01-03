@@ -15,7 +15,7 @@
 -   [x] on the "tasks" page include the date of creation on the task list row.
 -   [ ] change "create new lesson" from a card on the notes page to a button in the top right that opens a modal dialog to enter info. then make the notes page more elegant, searchable, filterable, orderable...
 -   [ ] Build FastAPI core (notes CRUD, note history, videos, tags, search)
--   [ ] when you check off a todo item on the tasks page, it should animate a strikethrough effect on the text, and then fade out after like 1 second, rather than just instantly disappearing.
+-   [x] when you check off a todo item on the tasks page, it should animate a strikethrough effect on the text, and then fade out after like 1 second, rather than just instantly disappearing.
 -   [ ] Add realtime collaboration (Yjs over WebSocket, storage of updates, presence)
 -   [ ] Implement upload pipeline (local filesystem + S3) with background processing
 -   [ ] Add transcription pipeline (Whisper worker, searchable transcript index, auto-tags) for yt and uploaded videos

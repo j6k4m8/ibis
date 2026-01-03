@@ -20,6 +20,12 @@ def test_register_and_login(client: TestClient) -> None:
     login_body = login_response.json()
     assert login_body["user"]["email"] == "teacher@example.com"
 
+    me_response = client.get(
+        "/auth/me", headers={"Authorization": f"Bearer {login_body['access_token']}"}
+    )
+    assert me_response.status_code == 200
+    assert me_response.json()["email"] == "teacher@example.com"
+
 
 def test_register_duplicate_email(client: TestClient) -> None:
     payload = {"email": "student@example.com", "password": "supersecret"}

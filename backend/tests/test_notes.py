@@ -1,42 +1,67 @@
 from fastapi.testclient import TestClient
 
 
-def test_create_and_list_note(client: TestClient) -> None:
+def test_create_and_list_note(client: TestClient, auth_headers: dict[str, str]) -> None:
     payload = {
         "title": "Lesson 1",
         "body": "Intro",
         "tags": ["tag1", "tag2"],
         "video_url": "https://youtube.com/watch?v=abc123",
     }
-    response = client.post("/notes", json=payload)
+    response = client.post("/notes", json=payload, headers=auth_headers)
     assert response.status_code == 201
     note = response.json()
     assert note["title"] == "Lesson 1"
     assert note["tags"] == ["tag1", "tag2"]
     assert note["video_url"] == payload["video_url"]
 
-    list_response = client.get("/notes")
+    list_response = client.get("/notes", headers=auth_headers)
     assert list_response.status_code == 200
     notes = list_response.json()
     assert len(notes) == 1
     assert notes[0]["id"] == note["id"]
 
 
-def test_update_creates_version(client: TestClient) -> None:
+def test_update_creates_version(client: TestClient, auth_headers: dict[str, str]) -> None:
     create_response = client.post(
         "/notes",
         json={"title": "Lesson 2", "body": "Old body", "tags": []},
+        headers=auth_headers,
     )
     note_id = create_response.json()["id"]
 
     update_response = client.patch(
         f"/notes/{note_id}",
         json={"body": "New body", "tags": ["updated"]},
+        headers=auth_headers,
     )
     assert update_response.status_code == 200
 
-    versions_response = client.get(f"/notes/{note_id}/versions")
+    versions_response = client.get(f"/notes/{note_id}/versions", headers=auth_headers)
     assert versions_response.status_code == 200
     versions = versions_response.json()
     assert len(versions) >= 2
     assert versions[0]["body"] == "New body"
+
+
+def test_notes_require_auth(client: TestClient) -> None:
+    response = client.get("/notes")
+    assert response.status_code == 401
+
+
+def test_notes_are_scoped_to_user(client: TestClient, auth_headers: dict[str, str]) -> None:
+    client.post(
+        "/notes",
+        json={"title": "Lesson 3", "body": "Scoped", "tags": []},
+        headers=auth_headers,
+    )
+
+    other = client.post(
+        "/auth/register",
+        json={"email": "other@example.com", "password": "supersecret"},
+    )
+    other_headers = {"Authorization": f"Bearer {other.json()['access_token']}"}
+
+    list_response = client.get("/notes", headers=other_headers)
+    assert list_response.status_code == 200
+    assert list_response.json() == []

@@ -44,6 +44,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
+    notes: Mapped[list["Note"]] = relationship(back_populates="user")
+
 
 class Classroom(Base):
     """Classroom grouping for teachers and students."""
@@ -98,9 +100,11 @@ class Note(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     video_id: Mapped[Optional[str]] = mapped_column(ForeignKey("videos.id"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     video: Mapped[Optional[Video]] = relationship(back_populates="notes", lazy="joined")
     versions: Mapped[list["NoteVersion"]] = relationship(back_populates="note")
+    user: Mapped[User] = relationship(back_populates="notes")
 
 
 class NoteVersion(Base):

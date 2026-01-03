@@ -3,6 +3,7 @@
 ## Roadmap
 - [ ] Define database schema and run initial migrations (users, classes, memberships, videos, notes, tags, transcripts, history)
 - [x] Add auth (email/password + JWT)
+- [x] Scope notes to authenticated users
 - [ ] Build FastAPI core (notes CRUD, note history, videos, tags, search)
 - [ ] Add realtime collaboration (Yjs over WebSocket, storage of updates, presence)
 - [ ] Implement upload pipeline (local filesystem + S3) with background processing

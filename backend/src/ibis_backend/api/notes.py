@@ -5,8 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from ibis_backend.dependencies import get_current_user
 from ibis_backend.db import get_db
-from ibis_backend.models import Note, NoteVersion, Video, utcnow
+from ibis_backend.models import Note, NoteVersion, User, Video, utcnow
 from ibis_backend.schemas import NoteCreate, NoteRead, NoteUpdate, NoteVersionRead
 
 router = APIRouter()
@@ -58,7 +59,11 @@ def create_note_version(note: Note, db: Session) -> NoteVersion:
 
 
 @router.post("", response_model=NoteRead, status_code=status.HTTP_201_CREATED)
-def create_note(payload: NoteCreate, db: Session = Depends(get_db)) -> NoteRead:
+def create_note(
+    payload: NoteCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> NoteRead:
     """Create a new note.
 
     Args:
@@ -87,6 +92,7 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)) -> NoteRead:
         created_at=utcnow(),
         updated_at=utcnow(),
         video=video,
+        user=current_user,
     )
     db.add(note)
     db.flush()
@@ -100,7 +106,9 @@ def create_note(payload: NoteCreate, db: Session = Depends(get_db)) -> NoteRead:
 
 @router.get("", response_model=list[NoteRead])
 def list_notes(
-    archived: bool = False, db: Session = Depends(get_db)
+    archived: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> list[NoteRead]:
     """List notes.
 
@@ -112,7 +120,7 @@ def list_notes(
         list[NoteRead]: List of notes.
     """
 
-    query = db.query(Note)
+    query = db.query(Note).filter(Note.user_id == current_user.id)
     if not archived:
         query = query.filter(Note.archived.is_(False))
     notes = query.order_by(Note.updated_at.desc()).all()
@@ -120,7 +128,11 @@ def list_notes(
 
 
 @router.get("/{note_id}", response_model=NoteRead)
-def get_note(note_id: str, db: Session = Depends(get_db)) -> NoteRead:
+def get_note(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> NoteRead:
     """Fetch a note by ID.
 
     Args:
@@ -131,7 +143,12 @@ def get_note(note_id: str, db: Session = Depends(get_db)) -> NoteRead:
         NoteRead: Retrieved note.
     """
 
-    note = db.query(Note).filter(Note.id == note_id).first()
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .filter(Note.user_id == current_user.id)
+        .first()
+    )
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
     return note_to_read(note)
@@ -139,7 +156,10 @@ def get_note(note_id: str, db: Session = Depends(get_db)) -> NoteRead:
 
 @router.patch("/{note_id}", response_model=NoteRead)
 def update_note(
-    note_id: str, payload: NoteUpdate, db: Session = Depends(get_db)
+    note_id: str,
+    payload: NoteUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> NoteRead:
     """Update a note and create a new history snapshot.
 
@@ -152,7 +172,12 @@ def update_note(
         NoteRead: Updated note.
     """
 
-    note = db.query(Note).filter(Note.id == note_id).first()
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .filter(Note.user_id == current_user.id)
+        .first()
+    )
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
@@ -175,7 +200,11 @@ def update_note(
 
 
 @router.get("/{note_id}/versions", response_model=list[NoteVersionRead])
-def list_note_versions(note_id: str, db: Session = Depends(get_db)) -> list[NoteVersionRead]:
+def list_note_versions(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[NoteVersionRead]:
     """List versions for a note.
 
     Args:
@@ -185,6 +214,15 @@ def list_note_versions(note_id: str, db: Session = Depends(get_db)) -> list[Note
     Returns:
         list[NoteVersionRead]: Note versions.
     """
+
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .filter(Note.user_id == current_user.id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
 
     versions = (
         db.query(NoteVersion)
@@ -207,7 +245,10 @@ def list_note_versions(note_id: str, db: Session = Depends(get_db)) -> list[Note
 
 @router.get("/{note_id}/versions/{version_id}", response_model=NoteVersionRead)
 def get_note_version(
-    note_id: str, version_id: str, db: Session = Depends(get_db)
+    note_id: str,
+    version_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> NoteVersionRead:
     """Fetch a specific version of a note.
 
@@ -219,6 +260,15 @@ def get_note_version(
     Returns:
         NoteVersionRead: Note version snapshot.
     """
+
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .filter(Note.user_id == current_user.id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
 
     version = (
         db.query(NoteVersion)

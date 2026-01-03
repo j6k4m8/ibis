@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ibis_backend.db import get_db
+from ibis_backend.dependencies import get_current_user
 from ibis_backend.models import User
 from ibis_backend.schemas import AuthResponse, LoginRequest, RegisterRequest, UserRead
 from ibis_backend.services.auth import create_access_token, hash_password, verify_password
@@ -75,3 +76,17 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
 
     token = create_access_token(subject=user.id)
     return AuthResponse(access_token=token, user=UserRead.model_validate(user))
+
+
+@router.get("/me", response_model=UserRead)
+def me(current_user: User = Depends(get_current_user)) -> UserRead:
+    """Return the current authenticated user.
+
+    Args:
+        current_user: Authenticated user.
+
+    Returns:
+        UserRead: User profile.
+    """
+
+    return UserRead.model_validate(current_user)

@@ -3,7 +3,7 @@ const BOLD_REGEX = /\*\*([^*]+)\*\*/g;
 const ITALIC_REGEX = /\*([^*]+)\*/g;
 const CODE_REGEX = /`([^`]+)`/g;
 const HEADING_REGEX = /^(#{1,3})\s+(.*)$/;
-const LIST_REGEX = /^[-*]\s+(.*)$/;
+const LIST_REGEX = /^[-*+]\s+(.*)$/;
 const TASK_REGEX = /^\[( |x|X)\]\s+(.*)$/;
 
 function escapeHtml(text: string): string {
@@ -16,28 +16,29 @@ function escapeHtml(text: string): string {
 }
 
 function renderInline(text: string): string {
-  return text
+  const escaped = escapeHtml(text);
+  return escaped
     .replace(CODE_REGEX, '<code>$1</code>')
     .replace(BOLD_REGEX, '<strong>$1</strong>')
     .replace(ITALIC_REGEX, '<em>$1</em>')
-    .replace(TIMESTAMP_REGEX, '<button class="ibis-timestamp" data-timestamp="$1">$1</button>');
+    .replace(
+      TIMESTAMP_REGEX,
+      '<span class="ibis-timestamp" data-timestamp="$1">$1</span>',
+    );
 }
 
-export function renderMarkdown(input: string): string {
-  const escaped = escapeHtml(input);
-  const lines = escaped.split('\n');
+export function renderMarkdownPreview(input: string, maxLines = 3): string {
+  const lines = input.split('\n').slice(0, maxLines);
   let html = '';
   let inList = false;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
-
     if (!line) {
       if (inList) {
         html += '</ul>';
         inList = false;
       }
-      html += '<div class="ibis-spacer"></div>';
       continue;
     }
 
@@ -48,8 +49,7 @@ export function renderMarkdown(input: string): string {
         inList = false;
       }
       const level = headingMatch[1].length;
-      const content = renderInline(headingMatch[2]);
-      html += `<h${level}>${content}</h${level}>`;
+      html += `<h${level}>${renderInline(headingMatch[2])}</h${level}>`;
       continue;
     }
 
@@ -63,9 +63,10 @@ export function renderMarkdown(input: string): string {
       const taskMatch = content.match(TASK_REGEX);
       if (taskMatch) {
         const checked = taskMatch[1].toLowerCase() === 'x';
-        const taskText = renderInline(taskMatch[2]);
         const checkboxClass = checked ? 'ibis-checkbox checked' : 'ibis-checkbox';
-        content = `<span class="${checkboxClass}">${checked ? '✓' : ''}</span>${taskText}`;
+        content = `<span class="${checkboxClass}">${checked ? '✓' : ''}</span>${renderInline(
+          taskMatch[2],
+        )}`;
       } else {
         content = renderInline(content);
       }

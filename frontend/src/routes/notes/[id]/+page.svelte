@@ -316,7 +316,9 @@
       </div>
 
       <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
-        <MarkdownEditor bind:value={body} on:timestamp={handleTimestamp} />
+        {#key note.id}
+          <MarkdownEditor bind:value={body} on:timestamp={handleTimestamp} />
+        {/key}
         <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
           <span>{saveStatus}</span>
           <button

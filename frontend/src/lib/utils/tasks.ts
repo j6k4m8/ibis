@@ -7,7 +7,7 @@ export type TaskItem = {
   completed: boolean;
 };
 
-const TASK_REGEX = /^\s*-\s*\[( |x|X)]\s+(.*)$/;
+const TASK_REGEX = /^\s*[-*+]\s*\[( |x|X)]\s*(.*)$/;
 
 export function extractTasks(notes: Note[]): TaskItem[] {
   const tasks: TaskItem[] = [];
@@ -20,10 +20,11 @@ export function extractTasks(notes: Note[]): TaskItem[] {
         continue;
       }
 
+      const text = match[2].trim();
       tasks.push({
         noteId: note.id,
         noteTitle: note.title,
-        text: match[2].trim(),
+        text: text || 'Untitled task',
         completed: match[1].toLowerCase() === 'x',
       });
     }

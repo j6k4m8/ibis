@@ -9,7 +9,7 @@ describe('extractTasks', () => {
       {
         id: 'note-1',
         title: 'Lesson A',
-        body: '- [ ] First task\n- [x] Done task\nNo task here',
+        body: '- [ ] First task\n- [x] Done task\n* [ ] Star task\nNo task here',
         tags: [],
         archived: false,
         created_at: '2024-01-01',
@@ -19,7 +19,7 @@ describe('extractTasks', () => {
       {
         id: 'note-2',
         title: 'Lesson B',
-        body: 'Intro\n- [ ] Another task',
+        body: 'Intro\n- [ ] Another task\n+ [x] Plus task\n- [ ]',
         tags: [],
         archived: false,
         created_at: '2024-01-01',
@@ -29,9 +29,12 @@ describe('extractTasks', () => {
     ];
 
     const tasks = extractTasks(notes);
-    expect(tasks).toHaveLength(3);
+    expect(tasks).toHaveLength(6);
     expect(tasks[0]).toMatchObject({ noteId: 'note-1', completed: false, text: 'First task' });
     expect(tasks[1]).toMatchObject({ noteId: 'note-1', completed: true, text: 'Done task' });
-    expect(tasks[2]).toMatchObject({ noteId: 'note-2', completed: false, text: 'Another task' });
+    expect(tasks[2]).toMatchObject({ noteId: 'note-1', completed: false, text: 'Star task' });
+    expect(tasks[3]).toMatchObject({ noteId: 'note-2', completed: false, text: 'Another task' });
+    expect(tasks[4]).toMatchObject({ noteId: 'note-2', completed: true, text: 'Plus task' });
+    expect(tasks[5]).toMatchObject({ noteId: 'note-2', completed: false, text: 'Untitled task' });
   });
 });

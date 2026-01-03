@@ -11,8 +11,15 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@milkdown/core": "^7.1.1",
+    "@milkdown/plugin-listener": "^7.1.1",
+    "@milkdown/prose": "^7.1.1",
+    "@milkdown/preset-commonmark": "^7.1.1",
+    "@milkdown/preset-gfm": "^7.1.1",
+    "@milkdown/utils": "^7.1.1",
     "@sveltejs/kit": "^2.5.0",
-    "svelte": "^4.2.0"
+    "svelte": "^4.2.0",
+    "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.0.0",

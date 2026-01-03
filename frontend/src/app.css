@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600&display=swap');
+@import '@milkdown/prose/view/style/prosemirror.css';
 
 @tailwind base;
 @tailwind components;
@@ -30,45 +31,113 @@ textarea:-webkit-autofill:focus {
   transition: background-color 9999s ease-in-out 0s;
 }
 
-.ibis-markdown {
+.ibis-markdown,
+.ibis-editor .ProseMirror {
   color: #1f2937;
   line-height: 1.65;
   font-size: 0.95rem;
 }
 
+.ibis-editor {
+  min-height: 320px;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ibis-editor:focus-within {
+  outline: none;
+  border-color: #fb923c;
+  box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.15);
+}
+
+.ibis-editor .ProseMirror {
+  min-height: 280px;
+  outline: none;
+}
+
+.ibis-editor .ProseMirror > * + * {
+  margin-top: 0.5rem;
+}
+
 .ibis-markdown h1,
 .ibis-markdown h2,
-.ibis-markdown h3 {
+.ibis-markdown h3,
+.ibis-editor .ProseMirror h1,
+.ibis-editor .ProseMirror h2,
+.ibis-editor .ProseMirror h3 {
   margin: 1rem 0 0.4rem;
   color: #0f172a;
 }
 
-.ibis-markdown h1 {
+.ibis-markdown h1,
+.ibis-editor .ProseMirror h1 {
   font-size: 1.5rem;
 }
 
-.ibis-markdown h2 {
+.ibis-markdown h2,
+.ibis-editor .ProseMirror h2 {
   font-size: 1.25rem;
 }
 
-.ibis-markdown h3 {
+.ibis-markdown h3,
+.ibis-editor .ProseMirror h3 {
   font-size: 1.1rem;
 }
 
-.ibis-markdown p {
+.ibis-markdown p,
+.ibis-editor .ProseMirror p {
   margin: 0.35rem 0;
 }
 
-.ibis-markdown ul {
+.ibis-markdown ul,
+.ibis-editor .ProseMirror ul {
   margin: 0.5rem 0 0.75rem 1.25rem;
   list-style: disc;
 }
 
-.ibis-markdown li {
+.ibis-markdown li,
+.ibis-editor .ProseMirror li {
   margin: 0.25rem 0;
 }
 
-.ibis-markdown code {
+.ibis-editor .ProseMirror li[data-item-type='task'] {
+  list-style: none;
+  position: relative;
+  padding-left: 1.6rem;
+}
+
+.ibis-editor .ProseMirror li[data-item-type='task']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.3rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 0.3rem;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+}
+
+.ibis-editor .ProseMirror li[data-item-type='task'][data-checked='true']::before {
+  border-color: #4ade80;
+  background: #dcfce7;
+}
+
+.ibis-editor .ProseMirror li[data-item-type='task'][data-checked='true']::after {
+  content: '✓';
+  position: absolute;
+  left: 0.18rem;
+  top: 0.18rem;
+  font-size: 0.75rem;
+  color: #15803d;
+}
+
+.ibis-markdown code,
+.ibis-editor .ProseMirror code {
   border-radius: 6px;
   background: #f1f5f9;
   padding: 0.1rem 0.3rem;
@@ -92,6 +161,7 @@ textarea:-webkit-autofill:focus {
   padding: 0.1rem 0.6rem;
   margin: 0 0.15rem;
   cursor: pointer;
+  appearance: none;
 }
 
 .ibis-timestamp:hover {
@@ -110,6 +180,8 @@ textarea:-webkit-autofill:focus {
   background: #ffffff;
   color: #0f172a;
   font-size: 0.7rem;
+  appearance: none;
+  cursor: pointer;
 }
 
 .ibis-checkbox.checked {

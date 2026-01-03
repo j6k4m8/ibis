@@ -207,6 +207,25 @@ textarea:-webkit-autofill:focus {
   background: #ffedd5;
 }
 
+.ibis-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid #bae6fd;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.8em;
+  padding: 0.1rem 0.6rem;
+  margin: 0 0.15rem;
+  cursor: pointer;
+  appearance: none;
+}
+
+.ibis-segment:hover {
+  background: #bae6fd;
+}
+
 .ibis-checkbox {
   display: inline-flex;
   align-items: center;

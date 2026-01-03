@@ -3,13 +3,18 @@
 
   import type { Editor } from '@milkdown/core';
 
+  import { segment } from '$lib/milkdown/segment';
   import { taskToggle } from '$lib/milkdown/taskToggle';
   import { timestamp } from '$lib/milkdown/timestamp';
   import { parseTimestamp } from '$lib/utils/timestamps';
 
   export let value = '';
 
-  const dispatch = createEventDispatcher<{ timestamp: number; value: string }>();
+  const dispatch = createEventDispatcher<{
+    timestamp: number;
+    segment: { start: number; end: number };
+    value: string;
+  }>();
 
   let editorRoot: HTMLDivElement | null = null;
   let editor: Editor | null = null;
@@ -39,6 +44,7 @@
         .use(gfm)
         .use(listener)
         .use(timestamp)
+        .use(segment)
         .use(taskToggle);
 
       try {
@@ -61,12 +67,26 @@
       return;
     }
 
-    const button = target.closest<HTMLButtonElement>('button[data-timestamp]');
-    if (!button) {
+    const segmentButton = target.closest<HTMLButtonElement>(
+      'button[data-segment-start][data-segment-end]',
+    );
+    if (segmentButton) {
+      const startRaw = segmentButton.dataset.segmentStart ?? '';
+      const endRaw = segmentButton.dataset.segmentEnd ?? '';
+      const start = parseTimestamp(startRaw);
+      const end = parseTimestamp(endRaw);
+      if (start !== null && end !== null) {
+        dispatch('segment', { start, end });
+        return;
+      }
+    }
+
+    const timestampButton = target.closest<HTMLButtonElement>('button[data-timestamp]');
+    if (!timestampButton) {
       return;
     }
 
-    const timestamp = button.dataset.timestamp;
+    const timestamp = timestampButton.dataset.timestamp;
     if (!timestamp) {
       return;
     }

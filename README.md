@@ -12,6 +12,7 @@ Modern rewrite of the Ibis lesson annotation app.
 - Tasks page that aggregates checklist items from notes.
 - Persistent tasks with creation timestamps and completion toggles.
 - Video playback ranges with looping start/end controls.
+- Segment loops from inline `|start - end|` notation with a clickable list.
 
 ## Dev servers
 

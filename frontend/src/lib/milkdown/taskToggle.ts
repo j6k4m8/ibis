@@ -15,7 +15,10 @@ export const taskToggle = $prose(
             return false;
           }
 
-          if (event.target.closest('button[data-timestamp]')) {
+          if (
+            event.target.closest('button[data-timestamp]') ||
+            event.target.closest('button[data-segment-start]')
+          ) {
             return false;
           }
 

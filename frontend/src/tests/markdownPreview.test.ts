@@ -13,10 +13,11 @@ describe('renderMarkdownPreview', () => {
   });
 
   it('escapes HTML while keeping inline formatting', () => {
-    const input = '**Bold** and <script>alert(1)</script> ==1:23==';
+    const input = '**Bold** and <script>alert(1)</script> ==1:23== |0:10 - 0:20|';
     const html = renderMarkdownPreview(input, 1);
     expect(html).toContain('<strong>Bold</strong>');
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).toContain('data-timestamp="1:23"');
+    expect(html).toContain('data-segment-start="0:10"');
   });
 });

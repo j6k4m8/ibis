@@ -7,6 +7,7 @@
   import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
   import { authStore } from '$lib/stores/auth';
   import { renderMarkdown, renderMarkdownPreview } from '$lib/utils/markdownPreview';
+  import { parseSegments } from '$lib/utils/segments';
   import { formatTimestamp, parseTimestamp } from '$lib/utils/timestamps';
   import type { Note, NoteVersion } from '$lib/types';
 
@@ -27,6 +28,7 @@
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let videoStartOverride: number | null = null;
   let videoAutoplay = false;
+  let segmentLoop: { start: number; end: number } | null = null;
   let videoStartSeconds: number | null = null;
   let videoEndSeconds: number | null = null;
   let videoStartText = '';
@@ -162,6 +164,7 @@
     if (!note?.video_url) {
       return;
     }
+    segmentLoop = null;
     const seconds = event.detail;
     const youtubeId = getYouTubeId(note.video_url);
     if (youtubeId) {
@@ -176,18 +179,52 @@
     }
   }
 
+  function startSegmentLoop(start: number, end: number) {
+    if (!note?.video_url) {
+      return;
+    }
+    const ordered = start <= end ? [start, end] : [end, start];
+    segmentLoop = { start: ordered[0], end: ordered[1] };
+    videoStartOverride = ordered[0];
+    videoAutoplay = true;
+
+    if (videoElement) {
+      videoElement.currentTime = ordered[0];
+      videoElement.play();
+    }
+  }
+
+  function stopSegmentLoop() {
+    segmentLoop = null;
+    videoStartOverride = null;
+    videoAutoplay = false;
+  }
+
+  function handleSegment(event: CustomEvent<{ start: number; end: number }>) {
+    startSegmentLoop(event.detail.start, event.detail.end);
+  }
+
   function handleVideoLoaded() {
-    if (videoElement && videoStartSeconds !== null) {
-      videoElement.currentTime = videoStartSeconds;
+    if (videoElement) {
+      const start = segmentLoop?.start ?? videoStartSeconds;
+      if (start !== null && start !== undefined) {
+        videoElement.currentTime = start;
+      }
     }
   }
 
   function handleVideoTimeUpdate() {
-    if (!videoElement || videoEndSeconds === null) {
+    if (!videoElement) {
       return;
     }
-    if (videoElement.currentTime >= videoEndSeconds) {
-      videoElement.currentTime = videoStartSeconds ?? 0;
+
+    const loopEnd = segmentLoop?.end ?? videoEndSeconds;
+    if (loopEnd === null || loopEnd === undefined) {
+      return;
+    }
+    const loopStart = segmentLoop?.start ?? videoStartSeconds ?? 0;
+    if (videoElement.currentTime >= loopEnd) {
+      videoElement.currentTime = loopStart;
       videoElement.play();
     }
   }
@@ -218,6 +255,7 @@
       }
     }
 
+    segmentLoop = null;
     videoStartOverride = null;
     videoAutoplay = false;
   }
@@ -230,8 +268,10 @@
   }
 
   $: noteTags = parseTags(tagsText);
+  $: segments = parseSegments(body);
   $: youtubeId = note?.video_url ? getYouTubeId(note.video_url) : null;
-  $: youtubeStart = videoStartOverride ?? videoStartSeconds ?? 0;
+  $: youtubeStart = segmentLoop?.start ?? videoStartOverride ?? videoStartSeconds ?? 0;
+  $: youtubeEnd = segmentLoop?.end ?? videoEndSeconds ?? null;
   $: youtubeParams = youtubeId
     ? (() => {
         const params = new URLSearchParams();
@@ -240,13 +280,14 @@
         params.set('rel', '0');
         params.set('modestbranding', '1');
         params.set('playsinline', '1');
-        const shouldLoop = videoStartSeconds !== null || videoEndSeconds !== null;
+        const shouldLoop =
+          segmentLoop !== null || videoStartSeconds !== null || videoEndSeconds !== null;
         if (shouldLoop) {
           params.set('loop', '1');
           params.set('playlist', youtubeId);
         }
-        if (videoEndSeconds !== null) {
-          params.set('end', String(Math.max(0, Math.floor(videoEndSeconds))));
+        if (youtubeEnd !== null) {
+          params.set('end', String(Math.max(0, Math.floor(youtubeEnd))));
         }
         return params.toString();
       })()
@@ -330,6 +371,51 @@
         {:else}
           <div class="mt-3 text-xs text-slate-400">No video link attached yet.</div>
         {/if}
+        {#if segments.length > 0 || segmentLoop}
+          <div class="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-4">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                Segments
+              </div>
+              {#if segmentLoop}
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  on:click={stopSegmentLoop}
+                >
+                  Stop looping
+                </button>
+              {/if}
+            </div>
+            {#if segments.length === 0}
+              <div class="mt-3 text-xs text-slate-400">
+                Add a segment like <code>|0:30 - 1:10|</code> in your notes.
+              </div>
+            {:else}
+              <div class="mt-3 space-y-2">
+                {#each segments as segment}
+                  <button
+                    type="button"
+                    class="flex w-full flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-left text-xs text-slate-600 transition hover:border-sky-200 hover:bg-sky-50"
+                    on:click={() => startSegmentLoop(segment.start, segment.end)}
+                  >
+                    <span class="inline-flex items-center gap-2">
+                      <span class="rounded-full bg-sky-100 px-2 py-1 text-[11px] font-semibold text-sky-700">
+                        {segment.startLabel}–{segment.endLabel}
+                      </span>
+                      <span class="text-slate-500">
+                        {segment.contextBefore}
+                        {segment.contextBefore && segment.contextAfter ? ' ' : ''}
+                        {segment.contextAfter}
+                      </span>
+                    </span>
+                    <span class="text-[11px] text-slate-400">Play loop</span>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
         <div class="mt-4 space-y-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
           <label class="block text-sm text-slate-600">
             Tags
@@ -391,7 +477,11 @@
     <div class="space-y-6">
       <div class="rounded-3xl border border-slate-200 bg-white/90 px-0 py-4 shadow-xl">
         {#key note.id}
-          <MarkdownEditor bind:value={body} on:timestamp={handleTimestamp} />
+          <MarkdownEditor
+            bind:value={body}
+            on:timestamp={handleTimestamp}
+            on:segment={handleSegment}
+          />
         {/key}
         <div class="mt-4 flex flex-wrap items-center justify-between gap-3 px-4 text-xs text-slate-500">
           <span>{saveStatus}</span>

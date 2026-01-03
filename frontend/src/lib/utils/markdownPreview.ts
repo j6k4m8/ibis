@@ -1,4 +1,5 @@
 const TIMESTAMP_REGEX = /==([^=]+)==/g;
+const SEGMENT_REGEX = /\|([^|]+?)\s*-\s*([^|]+?)\|/g;
 const BOLD_REGEX = /\*\*([^*]+)\*\*/g;
 const ITALIC_REGEX = /\*([^*]+)\*/g;
 const CODE_REGEX = /`([^`]+)`/g;
@@ -21,6 +22,10 @@ function renderInline(text: string): string {
     .replace(CODE_REGEX, '<code>$1</code>')
     .replace(BOLD_REGEX, '<strong>$1</strong>')
     .replace(ITALIC_REGEX, '<em>$1</em>')
+    .replace(
+      SEGMENT_REGEX,
+      '<span class="ibis-segment" data-segment-start="$1" data-segment-end="$2">$1–$2</span>',
+    )
     .replace(
       TIMESTAMP_REGEX,
       '<span class="ibis-timestamp" data-timestamp="$1">$1</span>',

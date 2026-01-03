@@ -40,7 +40,7 @@ textarea:-webkit-autofill:focus {
 
 .ibis-editor {
   min-height: 320px;
-  border-radius: 1rem;
+  border-radius: 0;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   padding: 1rem 1.25rem;

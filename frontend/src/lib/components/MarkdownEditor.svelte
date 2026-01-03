@@ -81,7 +81,7 @@
 </script>
 
 <div class="space-y-3">
-  <div class="flex items-center justify-between text-sm text-slate-600">
+  <div class="flex items-center justify-between px-4 text-sm text-slate-600">
     <span>Notes</span>
     <span class="text-xs text-slate-400">Use ==1:23== for timestamps</span>
   </div>

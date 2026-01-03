@@ -100,6 +100,8 @@ class Note(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     video_id: Mapped[Optional[str]] = mapped_column(ForeignKey("videos.id"))
+    video_start_seconds: Mapped[Optional[float]] = mapped_column(Float)
+    video_end_seconds: Mapped[Optional[float]] = mapped_column(Float)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     video: Mapped[Optional[Video]] = relationship(back_populates="notes", lazy="joined")

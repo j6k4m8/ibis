@@ -19,6 +19,8 @@ export type Note = {
   created_at: string;
   updated_at: string;
   video_url?: string | null;
+  video_start_seconds?: number | null;
+  video_end_seconds?: number | null;
 };
 
 export type NoteVersion = {

@@ -35,6 +35,8 @@ def note_to_read(note: Note) -> NoteRead:
         created_at=note.created_at,
         updated_at=note.updated_at,
         video_url=video_url,
+        video_start_seconds=note.video_start_seconds,
+        video_end_seconds=note.video_end_seconds,
     )
 
 
@@ -73,6 +75,8 @@ def create_note(
         created_at=utcnow(),
         updated_at=utcnow(),
         video=video,
+        video_start_seconds=payload.video_start_seconds,
+        video_end_seconds=payload.video_end_seconds,
         user=current_user,
     )
     db.add(note)
@@ -171,6 +175,10 @@ def update_note(
         note.tags = payload.tags
     if payload.archived is not None:
         note.archived = payload.archived
+    if "video_start_seconds" in payload.model_fields_set:
+        note.video_start_seconds = payload.video_start_seconds
+    if "video_end_seconds" in payload.model_fields_set:
+        note.video_end_seconds = payload.video_end_seconds
 
     note.updated_at = utcnow()
 

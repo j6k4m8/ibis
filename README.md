@@ -11,6 +11,7 @@ Modern rewrite of the Ibis lesson annotation app.
 - Tags page with deep-linked filters.
 - Tasks page that aggregates checklist items from notes.
 - Persistent tasks with creation timestamps and completion toggles.
+- Video playback ranges with looping start/end controls.
 
 ## Dev servers
 

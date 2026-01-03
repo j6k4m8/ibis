@@ -55,6 +55,8 @@ class NoteCreate(BaseModel):
     body: str = ""
     tags: list[str] = Field(default_factory=list)
     video_url: Optional[str] = None
+    video_start_seconds: Optional[float] = Field(None, ge=0)
+    video_end_seconds: Optional[float] = Field(None, ge=0)
 
 
 class NoteUpdate(BaseModel):
@@ -64,6 +66,8 @@ class NoteUpdate(BaseModel):
     body: Optional[str] = None
     tags: Optional[list[str]] = None
     archived: Optional[bool] = None
+    video_start_seconds: Optional[float] = Field(None, ge=0)
+    video_end_seconds: Optional[float] = Field(None, ge=0)
 
 
 class NoteRead(BaseModel):
@@ -77,6 +81,8 @@ class NoteRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     video_url: Optional[str] = None
+    video_start_seconds: Optional[float] = None
+    video_end_seconds: Optional[float] = None
 
     model_config = {"from_attributes": True}
 

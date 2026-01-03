@@ -140,9 +140,10 @@
                 {task.note_title}
               </a>
             </div>
-            <span class="text-[11px] uppercase tracking-widest text-slate-400">
-              {task.completed ? 'Done' : 'Open'}
-            </span>
+            <div class="text-right text-[11px] text-slate-400">
+              <div class="uppercase tracking-widest">{task.completed ? 'Done' : 'Open'}</div>
+              <div>{new Date(task.created_at).toLocaleDateString()}</div>
+            </div>
           </div>
       {/each}
     {/if}

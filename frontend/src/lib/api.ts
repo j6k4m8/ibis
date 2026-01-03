@@ -87,7 +87,14 @@ export async function getNote(token: string, noteId: string): Promise<Note> {
 
 export async function createNote(
   token: string,
-  payload: { title: string; body?: string; tags?: string[]; video_url?: string },
+  payload: {
+    title: string;
+    body?: string;
+    tags?: string[];
+    video_url?: string;
+    video_start_seconds?: number | null;
+    video_end_seconds?: number | null;
+  },
 ): Promise<Note> {
   return request<Note>(
     '/notes',
@@ -102,7 +109,14 @@ export async function createNote(
 export async function updateNote(
   token: string,
   noteId: string,
-  payload: { title?: string; body?: string; tags?: string[]; archived?: boolean },
+  payload: {
+    title?: string;
+    body?: string;
+    tags?: string[];
+    archived?: boolean;
+    video_start_seconds?: number | null;
+    video_end_seconds?: number | null;
+  },
 ): Promise<Note> {
   return request<Note>(
     `/notes/${noteId}`,

@@ -7,6 +7,8 @@ def test_create_and_list_note(client: TestClient, auth_headers: dict[str, str]) 
         "body": "Intro",
         "tags": ["tag1", "tag2"],
         "video_url": "https://youtube.com/watch?v=abc123",
+        "video_start_seconds": 12,
+        "video_end_seconds": 94,
     }
     response = client.post("/notes", json=payload, headers=auth_headers)
     assert response.status_code == 201
@@ -14,6 +16,8 @@ def test_create_and_list_note(client: TestClient, auth_headers: dict[str, str]) 
     assert note["title"] == "Lesson 1"
     assert note["tags"] == ["tag1", "tag2"]
     assert note["video_url"] == payload["video_url"]
+    assert note["video_start_seconds"] == payload["video_start_seconds"]
+    assert note["video_end_seconds"] == payload["video_end_seconds"]
 
     list_response = client.get("/notes", headers=auth_headers)
     assert list_response.status_code == 200
@@ -32,10 +36,12 @@ def test_update_creates_version(client: TestClient, auth_headers: dict[str, str]
 
     update_response = client.patch(
         f"/notes/{note_id}",
-        json={"body": "New body", "tags": ["updated"]},
+        json={"body": "New body", "tags": ["updated"], "video_start_seconds": 5},
         headers=auth_headers,
     )
     assert update_response.status_code == 200
+    updated_note = update_response.json()
+    assert updated_note["video_start_seconds"] == 5
 
     versions_response = client.get(f"/notes/{note_id}/versions", headers=auth_headers)
     assert versions_response.status_code == 200

@@ -27,11 +27,15 @@
   $: isNotes = currentPath.startsWith('/notes');
   $: isTasks = currentPath.startsWith('/tasks');
   $: isTags = currentPath.startsWith('/tags');
+  $: mainClass = isNotes ? 'mt-8 w-full' : 'mx-auto mt-8 w-full max-w-5xl';
+  $: navClass = isNotes
+    ? 'flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur'
+    : 'mx-auto flex w-full max-w-5xl items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur';
 </script>
 
 <div class="min-h-screen px-4 py-6 sm:px-8">
   {#if showNav}
-    <nav class="mx-auto flex w-full max-w-5xl items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur">
+    <nav class={navClass}>
       <a href="/" class="flex items-center gap-3 text-lg font-semibold text-slate-900">
         <span class="grid h-9 w-9 place-items-center rounded-full bg-orange-200 text-xl">𓅜</span>
         Ibis
@@ -83,7 +87,7 @@
     </nav>
   {/if}
 
-  <main class="mx-auto mt-8 w-full max-w-5xl">
+  <main class={mainClass}>
     <slot />
   </main>
 </div>

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Generator
 
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
@@ -45,11 +48,19 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 def init_db() -> None:
-    """Initialize database tables."""
+    """Initialize database tables or apply migrations."""
 
     import ibis_backend.models  # noqa: F401
 
-    Base.metadata.create_all(bind=engine)
+    database_url = get_settings().database_url
+    if database_url in {"sqlite://", "sqlite:///:memory:"}:
+        Base.metadata.create_all(bind=engine)
+        return
+
+    base_dir = Path(__file__).resolve().parents[3]
+    alembic_ini = base_dir / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini))
+    command.upgrade(alembic_cfg, "head")
 
 
 def get_db() -> Generator[Session, None, None]:

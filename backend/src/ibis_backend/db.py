@@ -57,8 +57,8 @@ def init_db() -> None:
         Base.metadata.create_all(bind=engine)
         return
 
-    base_dir = Path(__file__).resolve().parents[3]
-    alembic_ini = base_dir / "alembic.ini"
+    backend_dir = Path(__file__).resolve().parents[2]
+    alembic_ini = backend_dir / "alembic.ini"
     alembic_cfg = Config(str(alembic_ini))
     command.upgrade(alembic_cfg, "head")
 

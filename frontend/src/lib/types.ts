@@ -29,3 +29,13 @@ export type NoteVersion = {
   tags: string[];
   created_at: string;
 };
+
+export type Task = {
+  id: string;
+  note_id: string;
+  note_title: string;
+  text: string;
+  completed: boolean;
+  created_at: string;
+  updated_at: string;
+};

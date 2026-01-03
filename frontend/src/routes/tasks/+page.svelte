@@ -4,10 +4,9 @@
 
   import * as api from '$lib/api';
   import { authStore } from '$lib/stores/auth';
-  import { extractTasks } from '$lib/utils/tasks';
-  import type { TaskItem } from '$lib/utils/tasks';
+  import type { Task } from '$lib/types';
 
-  let tasks: TaskItem[] = [];
+  let tasks: Task[] = [];
   let loading = true;
   let error = '';
   let showCompleted = false;
@@ -34,8 +33,7 @@
     loading = true;
     error = '';
     try {
-      const notes = await api.listNotes(activeToken);
-      tasks = extractTasks(notes);
+      tasks = await api.listTasks(activeToken);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load tasks.';
     } finally {
@@ -43,7 +41,24 @@
     }
   }
 
-  $: filteredTasks = tasks.filter((task) => {
+  async function toggleTask(task: Task) {
+    if (!token) {
+      return;
+    }
+    const nextCompleted = !task.completed;
+    try {
+      const updated = await api.updateTask(token, task.id, { completed: nextCompleted });
+      tasks = tasks.map((item) => (item.id === updated.id ? updated : item));
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to update task.';
+    }
+  }
+
+  $: sortedTasks = [...tasks].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  $: filteredTasks = sortedTasks.filter((task) => {
     if (!showCompleted && task.completed) {
       return false;
     }
@@ -53,7 +68,9 @@
     }
 
     const query = searchQuery.toLowerCase();
-    return task.text.toLowerCase().includes(query) || task.noteTitle.toLowerCase().includes(query);
+    return (
+      task.text.toLowerCase().includes(query) || task.note_title.toLowerCase().includes(query)
+    );
   });
 </script>
 
@@ -65,7 +82,7 @@
   <div class="flex flex-wrap items-center justify-between gap-4">
     <div>
       <h1 class="text-2xl">Tasks</h1>
-      <p class="text-sm text-slate-500">Pulled from checklist items in your notes.</p>
+      <p class="text-sm text-slate-500">Checklist items pulled from your notes.</p>
     </div>
     <label class="inline-flex items-center gap-2 text-xs text-slate-500">
       <input type="checkbox" bind:checked={showCompleted} class="h-4 w-4 rounded border-slate-300" />
@@ -97,28 +114,36 @@
       </div>
     {:else}
       {#each filteredTasks as task}
-        <div class="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-          <div>
-            <div class="text-sm text-slate-900">
-              <span
-                class={`mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full border ${
-                  task.completed
-                    ? 'border-emerald-400 bg-emerald-100 text-emerald-600'
-                    : 'border-slate-300 bg-white text-slate-400'
-                }`}
+          <div class="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <div>
+              <div class="flex items-center gap-2 text-sm text-slate-900">
+                <button
+                  type="button"
+                  class={`inline-flex h-6 w-6 items-center justify-center rounded-full border transition ${
+                    task.completed
+                      ? 'border-emerald-400 bg-emerald-100 text-emerald-600'
+                      : 'border-slate-300 bg-white text-slate-400 hover:border-orange-300 hover:bg-orange-50'
+                  }`}
+                  on:click={() => toggleTask(task)}
+                  aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                >
+                  {task.completed ? '✓' : ''}
+                </button>
+                <span class={task.completed ? 'text-slate-400 line-through' : ''}>
+                  {task.text || 'Untitled task'}
+                </span>
+              </div>
+              <a
+                href={`/notes/${task.note_id}`}
+                class="mt-1 block text-xs text-slate-500 hover:underline"
               >
-                {task.completed ? '✓' : ''}
-              </span>
-              {task.text}
+                {task.note_title}
+              </a>
             </div>
-            <a href={`/notes/${task.noteId}`} class="mt-1 block text-xs text-slate-500 hover:underline">
-              {task.noteTitle}
-            </a>
+            <span class="text-[11px] uppercase tracking-widest text-slate-400">
+              {task.completed ? 'Done' : 'Open'}
+            </span>
           </div>
-          <span class="text-[11px] uppercase tracking-widest text-slate-400">
-            {task.completed ? 'Done' : 'Open'}
-          </span>
-        </div>
       {/each}
     {/if}
   </div>

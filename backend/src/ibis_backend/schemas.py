@@ -92,3 +92,23 @@ class NoteVersionRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TaskRead(BaseModel):
+    """Serialized task response."""
+
+    id: str
+    note_id: str
+    note_title: str
+    text: str
+    completed: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class TaskUpdate(BaseModel):
+    """Payload to update a task."""
+
+    completed: Optional[bool] = None

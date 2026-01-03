@@ -10,6 +10,7 @@ Modern rewrite of the Ibis lesson annotation app.
 - Markdown editor with preview and timestamp tokens.
 - Tags page with deep-linked filters.
 - Tasks page that aggregates checklist items from notes.
+- Persistent tasks with creation timestamps and completion toggles.
 
 ## Dev servers
 

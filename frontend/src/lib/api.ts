@@ -1,4 +1,4 @@
-import type { AuthResponse, Note, NoteVersion, User } from './types';
+import type { AuthResponse, Note, NoteVersion, Task, User } from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE_URL;
@@ -124,6 +124,25 @@ export async function getNoteVersion(
   versionId: string,
 ): Promise<NoteVersion> {
   return request<NoteVersion>(`/notes/${noteId}/versions/${versionId}`, {}, token);
+}
+
+export async function listTasks(token: string): Promise<Task[]> {
+  return request<Task[]>('/tasks', {}, token);
+}
+
+export async function updateTask(
+  token: string,
+  taskId: string,
+  payload: { completed?: boolean },
+): Promise<Task> {
+  return request<Task>(
+    `/tasks/${taskId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
 }
 
 export { ApiError };

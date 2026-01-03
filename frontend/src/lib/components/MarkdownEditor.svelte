@@ -3,6 +3,7 @@
 
   import type { Editor } from '@milkdown/core';
 
+  import { taskToggle } from '$lib/milkdown/taskToggle';
   import { timestamp } from '$lib/milkdown/timestamp';
   import { parseTimestamp } from '$lib/utils/timestamps';
 
@@ -37,7 +38,8 @@
         .use(commonmark)
         .use(gfm)
         .use(listener)
-        .use(timestamp);
+        .use(timestamp)
+        .use(taskToggle);
 
       try {
         await editor.create();

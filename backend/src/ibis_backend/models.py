@@ -103,6 +103,7 @@ class Note(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     video: Mapped[Optional[Video]] = relationship(back_populates="notes", lazy="joined")
+    tasks: Mapped[list["Task"]] = relationship(back_populates="note")
     versions: Mapped[list["NoteVersion"]] = relationship(back_populates="note")
     user: Mapped[User] = relationship(back_populates="notes")
 
@@ -120,6 +121,22 @@ class NoteVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     note: Mapped[Note] = relationship(back_populates="versions")
+
+
+class Task(Base):
+    """Checklist task extracted from a note."""
+
+    __tablename__ = "tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    note_id: Mapped[str] = mapped_column(ForeignKey("notes.id"), nullable=False)
+    text: Mapped[str] = mapped_column(String, default="", nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    occurrence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    note: Mapped[Note] = relationship(back_populates="tasks", lazy="joined")
 
 
 class NoteYjsUpdate(Base):

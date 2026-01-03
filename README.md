@@ -14,7 +14,7 @@
 
 ## Screenshots 
 
-| Screenshots                                                                                                                                                                                                                                 |                                                                                      |
+|                                                                                                                                                                                                                                              |                                                                                      |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Lesson page                                                                                                                                                                                                                                 | ![](https://github.com/user-attachments/assets/5d875734-0ead-4122-ae7d-848756cf94d8) |
 | Use `==00:23==` to tag timestamps; clicking timestamps scans the video to that moment.                                                                                                                                                      | ![](https://github.com/user-attachments/assets/ec6eb247-2306-4b45-9713-9c50a8d51f19) |
@@ -24,6 +24,18 @@
 | Notes library page with uploaded or linked videos:                                                                                                                                                                                          | ![](https://github.com/user-attachments/assets/6315c717-f663-4a14-896f-1913a699e943) |
 | User profile page with storage usage meter                                                                                                                                                                                                  | ![](https://github.com/user-attachments/assets/5f474126-63b5-4a28-86cb-93264f52a518) |
 
+
+
+## Roadmap 
+
+Help welcome :) Please reach out or file an Issue to "claim" a task before contributing to avoid duplicating work!
+
+- [ ] video speed manipulation
+- [ ] optional [multilingual]-transcription of videos
+- [ ] video transcoding to reduce file sizes
+- [ ] realtime multiuser notes collaboration
+- [ ] k8s packaging
+- [ ] (free) public deployment
 
 
 ## Dev servers

@@ -24,11 +24,11 @@
   }
 
   $: currentPath = $page.url.pathname;
-  $: isNotes = currentPath.startsWith('/notes');
+  $: isNotesDetail = currentPath.startsWith('/notes/') && currentPath !== '/notes';
   $: isTasks = currentPath.startsWith('/tasks');
   $: isTags = currentPath.startsWith('/tags');
-  $: mainClass = isNotes ? 'mt-8 w-full' : 'mx-auto mt-8 w-full max-w-5xl';
-  $: navClass = isNotes
+  $: mainClass = isNotesDetail ? 'mt-8 w-full' : 'mx-auto mt-8 w-full max-w-5xl';
+  $: navClass = isNotesDetail
     ? 'flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur'
     : 'mx-auto flex w-full max-w-5xl items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur';
 </script>
@@ -43,7 +43,7 @@
       <div class="flex items-center gap-4 text-sm">
         <a
           href="/notes"
-          class={`rounded-full px-4 py-2 transition ${isNotes ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+          class={`rounded-full px-4 py-2 transition ${currentPath.startsWith('/notes') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
         >
           Notes
         </a>

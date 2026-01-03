@@ -10,7 +10,7 @@ export type Segment = {
   lineIndex: number;
 };
 
-const SEGMENT_REGEX = /\|([^|]+?)\s*-\s*([^|]+?)\|/g;
+const SEGMENT_REGEX = /\|:\s*([^|]+?)\s*-\s*([^|]+?)\s*:\|/g;
 
 function normalizeToken(value: string): string {
   return value.trim().replace(/^:+|:+$/g, '');

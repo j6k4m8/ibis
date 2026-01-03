@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
 
@@ -26,8 +26,12 @@
   let lastSavedAt: Date | null = null;
   let lastSavedPayload = '';
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  let videoStartOverride: number | null = null;
-  let videoAutoplay = false;
+  let youtubeContainer: HTMLDivElement | null = null;
+  let youtubePlayer: any = null;
+  let youtubeReady = false;
+  let youtubeLoopTimer: ReturnType<typeof setInterval> | null = null;
+  let youtubeApiPromise: Promise<void> | null = null;
+  let youtubePlayerId: string | null = null;
   let segmentLoop: { start: number; end: number } | null = null;
   let videoStartSeconds: number | null = null;
   let videoEndSeconds: number | null = null;
@@ -52,6 +56,16 @@
     return () => unsubscribe();
   });
 
+  onDestroy(() => {
+    if (youtubeLoopTimer) {
+      clearInterval(youtubeLoopTimer);
+      youtubeLoopTimer = null;
+    }
+    if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+      youtubePlayer.destroy();
+    }
+  });
+
   function parseTags(text: string): string[] {
     return text
       .split(',')
@@ -67,6 +81,119 @@
 
     const match = url.match(/[?&]v=([^&]+)/);
     return match ? match[1] : null;
+  }
+
+  async function loadYouTubeApi() {
+    if (youtubeApiPromise) {
+      return youtubeApiPromise;
+    }
+    youtubeApiPromise = new Promise<void>((resolve) => {
+      if (typeof window === 'undefined') {
+        resolve();
+        return;
+      }
+      const win = window as typeof window & {
+        YT?: { Player?: any };
+        onYouTubeIframeAPIReady?: () => void;
+      };
+
+      if (win.YT?.Player) {
+        resolve();
+        return;
+      }
+
+      if (!document.querySelector('script[data-ibis-youtube]')) {
+        const script = document.createElement('script');
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        script.dataset.ibisYoutube = 'true';
+        document.body.appendChild(script);
+      }
+
+      const previous = win.onYouTubeIframeAPIReady;
+      win.onYouTubeIframeAPIReady = () => {
+        if (typeof previous === 'function') {
+          previous();
+        }
+        resolve();
+      };
+    });
+
+    return youtubeApiPromise;
+  }
+
+  async function initializeYouTubePlayer(videoId: string) {
+    if (!youtubeContainer) {
+      return;
+    }
+    await loadYouTubeApi();
+
+    const win = window as typeof window & { YT?: { Player?: any } };
+    if (!win.YT?.Player) {
+      return;
+    }
+
+    if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+      youtubePlayer.destroy();
+    }
+    youtubeReady = false;
+    youtubePlayerId = videoId;
+
+    youtubePlayer = new win.YT.Player(youtubeContainer, {
+      videoId,
+      width: '100%',
+      height: '100%',
+      playerVars: {
+        rel: 0,
+        modestbranding: 1,
+        playsinline: 1,
+      },
+      events: {
+        onReady: () => {
+          youtubeReady = true;
+          const start = videoStartSeconds ?? null;
+          if (start !== null) {
+            youtubePlayer.seekTo(start, true);
+            youtubePlayer.pauseVideo();
+          }
+          updateYouTubeLoopMonitor();
+        },
+      },
+    });
+  }
+
+  function updateYouTubeLoopMonitor() {
+    if (!youtubeReady || !youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
+      if (youtubeLoopTimer) {
+        clearInterval(youtubeLoopTimer);
+        youtubeLoopTimer = null;
+      }
+      return;
+    }
+
+    const loopEnd = segmentLoop?.end ?? videoEndSeconds;
+    if (loopEnd === null || loopEnd === undefined) {
+      if (youtubeLoopTimer) {
+        clearInterval(youtubeLoopTimer);
+        youtubeLoopTimer = null;
+      }
+      return;
+    }
+
+    const loopStart = segmentLoop?.start ?? videoStartSeconds ?? 0;
+    if (youtubeLoopTimer) {
+      clearInterval(youtubeLoopTimer);
+    }
+    youtubeLoopTimer = setInterval(() => {
+      if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
+        return;
+      }
+      const current = youtubePlayer.getCurrentTime();
+      if (current >= loopEnd - 0.15) {
+        youtubePlayer.seekTo(loopStart, true);
+        youtubePlayer.playVideo();
+      }
+    }, 250);
   }
 
   async function loadNote(activeToken: string, noteId: string) {
@@ -160,16 +287,19 @@
     }, 900);
   }
 
-  function handleTimestamp(event: CustomEvent<number>) {
+  function seekToTimestamp(seconds: number, clearLoop = true) {
     if (!note?.video_url) {
       return;
     }
-    segmentLoop = null;
-    const seconds = event.detail;
+    if (clearLoop) {
+      stopSegmentLoop();
+    }
     const youtubeId = getYouTubeId(note.video_url);
     if (youtubeId) {
-      videoStartOverride = seconds;
-      videoAutoplay = true;
+      if (youtubePlayer && youtubeReady) {
+        youtubePlayer.seekTo(seconds, true);
+        youtubePlayer.playVideo();
+      }
       return;
     }
 
@@ -179,14 +309,23 @@
     }
   }
 
+  function handleTimestamp(event: CustomEvent<number>) {
+    seekToTimestamp(event.detail, true);
+  }
+
   function startSegmentLoop(start: number, end: number) {
     if (!note?.video_url) {
       return;
     }
     const ordered = start <= end ? [start, end] : [end, start];
     segmentLoop = { start: ordered[0], end: ordered[1] };
-    videoStartOverride = ordered[0];
-    videoAutoplay = true;
+    updateYouTubeLoopMonitor();
+
+    if (youtubePlayer && youtubeReady) {
+      youtubePlayer.seekTo(ordered[0], true);
+      youtubePlayer.playVideo();
+      return;
+    }
 
     if (videoElement) {
       videoElement.currentTime = ordered[0];
@@ -196,8 +335,7 @@
 
   function stopSegmentLoop() {
     segmentLoop = null;
-    videoStartOverride = null;
-    videoAutoplay = false;
+    updateYouTubeLoopMonitor();
   }
 
   function handleSegment(event: CustomEvent<{ start: number; end: number }>) {
@@ -256,9 +394,9 @@
     }
 
     segmentLoop = null;
-    videoStartOverride = null;
-    videoAutoplay = false;
+    updateYouTubeLoopMonitor();
   }
+
 
   $: if (ready) {
     title;
@@ -270,31 +408,18 @@
   $: noteTags = parseTags(tagsText);
   $: segments = parseSegments(body);
   $: youtubeId = note?.video_url ? getYouTubeId(note.video_url) : null;
-  $: youtubeStart = segmentLoop?.start ?? videoStartOverride ?? videoStartSeconds ?? 0;
-  $: youtubeEnd = segmentLoop?.end ?? videoEndSeconds ?? null;
-  $: youtubeParams = youtubeId
-    ? (() => {
-        const params = new URLSearchParams();
-        params.set('start', String(Math.max(0, Math.floor(youtubeStart))));
-        params.set('autoplay', videoAutoplay ? '1' : '0');
-        params.set('rel', '0');
-        params.set('modestbranding', '1');
-        params.set('playsinline', '1');
-        const shouldLoop =
-          segmentLoop !== null || videoStartSeconds !== null || videoEndSeconds !== null;
-        if (shouldLoop) {
-          params.set('loop', '1');
-          params.set('playlist', youtubeId);
-        }
-        if (youtubeEnd !== null) {
-          params.set('end', String(Math.max(0, Math.floor(youtubeEnd))));
-        }
-        return params.toString();
-      })()
-    : null;
-  $: youtubeEmbed = youtubeId
-    ? `https://www.youtube.com/embed/${youtubeId}?${youtubeParams}`
-    : null;
+  $: if (youtubeId && youtubeContainer && youtubeId !== youtubePlayerId) {
+    initializeYouTubePlayer(youtubeId);
+  }
+  $: if (!youtubeId && youtubePlayer && typeof youtubePlayer.destroy === 'function') {
+    youtubePlayer.destroy();
+    youtubePlayer = null;
+    youtubeReady = false;
+    if (youtubeLoopTimer) {
+      clearInterval(youtubeLoopTimer);
+      youtubeLoopTimer = null;
+    }
+  }
   $: saveStatus = saving
     ? 'Saving...'
     : lastSavedAt
@@ -337,14 +462,8 @@
 
         <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
           {#if note.video_url}
-            {#if youtubeEmbed}
-              <iframe
-                title="Lesson video"
-                src={youtubeEmbed}
-                class="aspect-video w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-              ></iframe>
+            {#if youtubeId}
+              <div class="aspect-video w-full" bind:this={youtubeContainer}></div>
             {:else}
               <video
                 bind:this={videoElement}
@@ -389,7 +508,7 @@
             </div>
             {#if segments.length === 0}
               <div class="mt-3 text-xs text-slate-400">
-                Add a segment like <code>|0:30 - 1:10|</code> in your notes.
+                Add a segment like <code>|:0:30 - 1:10:|</code> in your notes.
               </div>
             {:else}
               <div class="mt-3 space-y-2">
@@ -411,6 +530,22 @@
                     </span>
                     <span class="text-[11px] text-slate-400">Play loop</span>
                   </button>
+                  <div class="flex flex-wrap gap-2 pl-3 text-[11px] text-slate-400">
+                    <button
+                      type="button"
+                      class="rounded-full border border-slate-200 px-2 py-1 transition hover:border-sky-200 hover:bg-sky-50"
+                      on:click={() => seekToTimestamp(segment.start, false)}
+                    >
+                      {segment.startLabel}
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-full border border-slate-200 px-2 py-1 transition hover:border-sky-200 hover:bg-sky-50"
+                      on:click={() => seekToTimestamp(segment.end, false)}
+                    >
+                      {segment.endLabel}
+                    </button>
+                  </div>
                 {/each}
               </div>
             {/if}
@@ -450,8 +585,14 @@
                   type="text"
                   bind:value={videoStartText}
                   placeholder="0:00"
-                  on:blur={updateVideoRange}
-                  on:change={updateVideoRange}
+                  on:blur={() => {
+                    updateVideoRange();
+                    scheduleSave();
+                  }}
+                  on:input={() => {
+                    updateVideoRange();
+                    scheduleSave();
+                  }}
                 />
               </label>
               <label class="block text-xs text-slate-500">
@@ -461,8 +602,14 @@
                   type="text"
                   bind:value={videoEndText}
                   placeholder="3:30"
-                  on:blur={updateVideoRange}
-                  on:change={updateVideoRange}
+                  on:blur={() => {
+                    updateVideoRange();
+                    scheduleSave();
+                  }}
+                  on:input={() => {
+                    updateVideoRange();
+                    scheduleSave();
+                  }}
                 />
               </label>
             </div>

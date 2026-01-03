@@ -4,7 +4,7 @@ import { parseSegments } from '../lib/utils/segments';
 
 describe('parseSegments', () => {
   it('parses segments with context', () => {
-    const input = 'Warmup |0:30 - 1:10| alternate picking fast';
+    const input = 'Warmup |:0:30 - 1:10:| alternate picking fast';
     const segments = parseSegments(input);
     expect(segments).toHaveLength(1);
     expect(segments[0]).toMatchObject({
@@ -22,5 +22,11 @@ describe('parseSegments', () => {
     const segments = parseSegments(input);
     expect(segments[0].start).toBe(65);
     expect(segments[0].end).toBe(135);
+  });
+
+  it('ignores non-repeat pipes', () => {
+    const input = 'Skip |0:30 - 1:10| without repeat symbols';
+    const segments = parseSegments(input);
+    expect(segments).toHaveLength(0);
   });
 });

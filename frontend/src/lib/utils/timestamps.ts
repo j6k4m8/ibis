@@ -8,9 +8,17 @@ export function parseTimestamp(input: string): number | null {
     return Number(trimmed);
   }
 
-  const parts = trimmed.split(':').map((part) => Number(part));
+  const parts = trimmed
+    .split(':')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .map((part) => Number(part));
   if (parts.some((part) => Number.isNaN(part))) {
     return null;
+  }
+
+  if (parts.length === 1) {
+    return parts[0];
   }
 
   if (parts.length === 2) {

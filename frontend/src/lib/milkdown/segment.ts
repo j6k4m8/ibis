@@ -2,7 +2,11 @@ import { InputRule } from '@milkdown/prose/inputrules';
 import { $inputRule, $nodeSchema, $remark } from '@milkdown/utils';
 import { visit } from 'unist-util-visit';
 
-const SEGMENT_REGEX = /\|([^|]+?)\s*-\s*([^|]+?)\|/g;
+const SEGMENT_REGEX = /\|:\s*([^|]+?)\s*-\s*([^|]+?)\s*:\|/g;
+
+function normalizeToken(value: string) {
+  return value.trim().replace(/^:+|:+$/g, '');
+}
 
 function remarkSegment() {
   return (tree: any) => {
@@ -23,7 +27,11 @@ function remarkSegment() {
         if (start > lastIndex) {
           parts.push({ type: 'text', value: value.slice(lastIndex, start) });
         }
-        parts.push({ type: 'segment', start: match[1].trim(), end: match[2].trim() });
+        parts.push({
+          type: 'segment',
+          start: normalizeToken(match[1]),
+          end: normalizeToken(match[2]),
+        });
         lastIndex = end;
       }
 
@@ -78,7 +86,7 @@ const segmentSchema = $nodeSchema('segment', () => ({
   toMarkdown: {
     match: (node: any) => node.type.name === 'segment',
     runner: (state: any, node: any) => {
-      state.addNode('text', undefined, `|${node.attrs.start} - ${node.attrs.end}|`);
+      state.addNode('text', undefined, `|:${node.attrs.start} - ${node.attrs.end}:|`);
     },
   },
 }));
@@ -91,7 +99,9 @@ const segmentInputRule = $inputRule((ctx) => {
     return state.tr.replaceWith(
       start,
       end,
-      segmentSchema.type(ctx).create({ start: startText.trim(), end: endText.trim() }),
+      segmentSchema
+        .type(ctx)
+        .create({ start: normalizeToken(startText), end: normalizeToken(endText) }),
     );
   });
 });

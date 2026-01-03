@@ -12,6 +12,8 @@
 - [x] Build auth UI (login/register) and notes list/detail screens
 - [ ] Build SvelteKit UI (editor, video viewer controls, tags, history)
 - [x] Add tasks view and search filter in notes UI
+- [x] Add tags navigation page and tag deep-links
+- [x] Add markdown editor preview with timestamp tokens
 - [ ] Add tests coverage for API, workers, and frontend
 - [ ] Add deployment configs for Fly.io and k8s (containers, env, migrations)
 

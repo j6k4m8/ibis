@@ -26,6 +26,7 @@
   $: currentPath = $page.url.pathname;
   $: isNotes = currentPath.startsWith('/notes');
   $: isTasks = currentPath.startsWith('/tasks');
+  $: isTags = currentPath.startsWith('/tags');
 </script>
 
 <div class="min-h-screen px-4 py-6 sm:px-8">
@@ -47,6 +48,12 @@
           class={`rounded-full px-4 py-2 transition ${isTasks ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
         >
           Tasks
+        </a>
+        <a
+          href="/tags"
+          class={`rounded-full px-4 py-2 transition ${isTags ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+        >
+          Tags
         </a>
         {#if authState?.user}
           <div class="hidden items-center gap-3 text-slate-600 sm:flex">

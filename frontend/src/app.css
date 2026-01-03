@@ -30,6 +30,94 @@ textarea:-webkit-autofill:focus {
   transition: background-color 9999s ease-in-out 0s;
 }
 
+.ibis-markdown {
+  color: #1f2937;
+  line-height: 1.65;
+  font-size: 0.95rem;
+}
+
+.ibis-markdown h1,
+.ibis-markdown h2,
+.ibis-markdown h3 {
+  margin: 1rem 0 0.4rem;
+  color: #0f172a;
+}
+
+.ibis-markdown h1 {
+  font-size: 1.5rem;
+}
+
+.ibis-markdown h2 {
+  font-size: 1.25rem;
+}
+
+.ibis-markdown h3 {
+  font-size: 1.1rem;
+}
+
+.ibis-markdown p {
+  margin: 0.35rem 0;
+}
+
+.ibis-markdown ul {
+  margin: 0.5rem 0 0.75rem 1.25rem;
+  list-style: disc;
+}
+
+.ibis-markdown li {
+  margin: 0.25rem 0;
+}
+
+.ibis-markdown code {
+  border-radius: 6px;
+  background: #f1f5f9;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.85em;
+  color: #0f172a;
+}
+
+.ibis-markdown .ibis-spacer {
+  height: 0.75rem;
+}
+
+.ibis-timestamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.8em;
+  padding: 0.1rem 0.6rem;
+  margin: 0 0.15rem;
+  cursor: pointer;
+}
+
+.ibis-timestamp:hover {
+  background: #ffedd5;
+}
+
+.ibis-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.5rem;
+  border-radius: 0.3rem;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.7rem;
+}
+
+.ibis-checkbox.checked {
+  border-color: #4ade80;
+  background: #dcfce7;
+  color: #15803d;
+}
+
 h1,
 h2,
 h3 {

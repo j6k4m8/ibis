@@ -40,8 +40,35 @@ def test_update_creates_version(client: TestClient, auth_headers: dict[str, str]
     versions_response = client.get(f"/notes/{note_id}/versions", headers=auth_headers)
     assert versions_response.status_code == 200
     versions = versions_response.json()
-    assert len(versions) >= 2
+    assert len(versions) >= 1
     assert versions[0]["body"] == "New body"
+
+
+def test_versions_throttled_to_one_per_minute(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    create_response = client.post(
+        "/notes",
+        json={"title": "Lesson 3", "body": "First", "tags": []},
+        headers=auth_headers,
+    )
+    note_id = create_response.json()["id"]
+
+    client.patch(
+        f"/notes/{note_id}",
+        json={"body": "Second"},
+        headers=auth_headers,
+    )
+    client.patch(
+        f"/notes/{note_id}",
+        json={"body": "Third"},
+        headers=auth_headers,
+    )
+
+    versions_response = client.get(f"/notes/{note_id}/versions", headers=auth_headers)
+    versions = versions_response.json()
+    assert len(versions) == 1
+    assert versions[0]["body"] == "Third"
 
 
 def test_notes_require_auth(client: TestClient) -> None:

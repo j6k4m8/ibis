@@ -148,9 +148,12 @@
             {#if note.tags.length > 0}
               <div class="mt-3 flex flex-wrap gap-2">
                 {#each note.tags as tag}
-                  <span class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500">
+                  <a
+                    href={`/tags?tag=${encodeURIComponent(tag)}`}
+                    class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500 hover:border-orange-200 hover:text-orange-700"
+                  >
                     #{tag}
-                  </span>
+                  </a>
                 {/each}
               </div>
             {/if}

@@ -2,6 +2,12 @@
 
 Modern rewrite of the Ibis lesson annotation app.
 
+## Features
+
+- Login/register UI with local token persistence.
+- Notes list + detail editing with history snapshot preview.
+- Video link preview with YouTube embed support.
+
 ## Dev servers
 
 All-in-one:

@@ -1,7 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
+  --ibis-ink: #0f172a;
+  --ibis-muted: #475569;
+  --ibis-iris: #f97316;
+  --ibis-moss: #14b8a6;
+  --ibis-sun: #fde68a;
+  --ibis-cloud: #f8fafc;
+}
+
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--ibis-ink);
+  background: radial-gradient(circle at top, #fff7ed, #f8fafc 45%, #e2e8f0 100%);
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Instrument Serif', serif;
+  letter-spacing: -0.02em;
 }

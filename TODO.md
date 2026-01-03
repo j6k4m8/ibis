@@ -9,7 +9,8 @@
 - [ ] Implement upload pipeline (local filesystem + S3) with background processing
 - [ ] Build video segmenter (timeline UI, save segments, FFmpeg clip worker)
 - [ ] Add transcription pipeline (Whisper worker, searchable transcript index, auto-tags)
-- [ ] Build SvelteKit UI (notes list, editor, video viewer, tasks, search, tags, history)
+- [x] Build auth UI (login/register) and notes list/detail screens
+- [ ] Build SvelteKit UI (editor, video viewer controls, tasks, search, tags, history)
 - [ ] Add tests coverage for API, workers, and frontend
 - [ ] Add deployment configs for Fly.io and k8s (containers, env, migrations)
 

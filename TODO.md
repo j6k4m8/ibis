@@ -5,6 +5,11 @@
 -   [x] Define database schema and run initial migrations (users, classes, memberships, videos, notes, tags, transcripts, history)
 -   [x] Add auth (email/password + JWT)
 -   [x] Scope notes to authenticated users
+-   [x] Build upload pipeline (local filesystem only) with 100MB per-file client-side limit
+-   [x] Add video library (videos reusable across notes) with naming at upload or note creation
+-   [x] Update note creation flow to choose YouTube link or uploaded video library item
+-   [x] Add /me page with logout + storage usage gauge (5GB free, show total uploaded bytes)
+-   [x] Add /library video catalog with filters + detail view to play video and create notes
 -   [x] support notating start and end times for a video in the metadata (maybe under tags editor?); if specified, start playing at Start and end at End and auto repeat the video when it ends or gets to endpt; hide youtube video suggestions; don't auto-play
 -   [x] recognize ==|:mm:ss - mm:ss:|== timestamp ranges, support segment-based repeats. do just |:mm:ss - mm:ss:| (i.e., no ==) ideally, if you can figure out how to do that in the editor without requiring ==-wrap....
     -   [x] if you click one of these, jump to the start time and start playing the video from there to the end time, and then auto loop.
@@ -14,19 +19,20 @@
 -   [x] "history" should use date as header, not title. and show just the last 3 snapshots, with a "view all" link to see the full history page for that note at /notes/{id}/history
 -   [x] on the "tasks" page include the date of creation on the task list row.
 -   [x] change "create new lesson" from a card on the notes page to a button in the top right that opens a modal dialog to enter info. then make the notes page more elegant, searchable, filterable, orderable...
--   [ ] Build FastAPI core (notes CRUD, note history, videos, tags, search)
+-   [x] Build FastAPI core (notes CRUD, note history, videos, tags, search)
 -   [x] when you check off a todo item on the tasks page, it should animate a strikethrough effect on the text, and then fade out after like 1 second, rather than just instantly disappearing.
 -   [ ] Add realtime collaboration (Yjs over WebSocket, storage of updates, presence)
 -   [ ] Implement upload pipeline (local filesystem + S3) with background processing
 -   [ ] Add transcription pipeline (Whisper worker, searchable transcript index, auto-tags) for yt and uploaded videos
--   [ ] "your notes" /notes page should not be full-width like this. just the actual note/{x} page should be full width.
+-   [x] "your notes" /notes page should not be full-width like this. just the actual note/{x} page should be full width.
 -   [ ] Build video segmenter (timeline UI, save segments, FFmpeg clip worker)
 -   [x] Build auth UI (login/register) and notes list/detail screens
--   [ ] Build SvelteKit UI (editor, video viewer controls, tags, history)
+-   [x] Build SvelteKit UI (editor, video viewer controls, tags, history)
 -   [x] Add tasks view and search filter in notes UI
 -   [x] Persist tasks with creation timestamps + toggle from editor/tasks page
 -   [x] Add tags navigation page and tag deep-links
 -   [x] Add markdown editor preview with timestamp tokens
+-   [x] Add stable task IDs in markdown to preserve task identity across edits
 -   [ ] Add tests coverage for API, workers, and frontend
 -   [ ] Add deployment configs for Fly.io and k8s (containers, env, migrations)
 
@@ -34,4 +40,4 @@
 
 ## Feature Backlog
 
--   Add stable task IDs in markdown to preserve task identity across text edits.
+-   Add optional video transcoding to reduce file sizes after upload (auto or manual).

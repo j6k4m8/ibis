@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
-  import { goto } from '$app/navigation';
   import { page } from '$app/stores';
 
   import { authStore } from '$lib/stores/auth';
@@ -18,19 +17,14 @@
     authStore.init();
   });
 
-  function logout() {
-    authStore.clear();
-    goto('/login');
-  }
-
   $: currentPath = $page.url.pathname;
   $: isNotesDetail = currentPath.startsWith('/notes/') && currentPath !== '/notes';
   $: isTasks = currentPath.startsWith('/tasks');
-  $: isTags = currentPath.startsWith('/tags');
+  $: isMe = currentPath.startsWith('/me');
+  $: isLibrary = currentPath.startsWith('/library');
   $: mainClass = isNotesDetail ? 'mt-8 w-full' : 'mx-auto mt-8 w-full max-w-5xl';
-  $: navClass = isNotesDetail
-    ? 'flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur'
-    : 'mx-auto flex w-full max-w-5xl items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur';
+  $: navClass =
+    'flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur';
 </script>
 
 <div class="min-h-screen px-4 py-6 sm:px-8">
@@ -42,34 +36,26 @@
       </a>
       <div class="flex items-center gap-4 text-sm">
         <a
-          href="/notes"
-          class={`rounded-full px-4 py-2 transition ${currentPath.startsWith('/notes') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
-        >
-          Notes
-        </a>
-        <a
           href="/tasks"
           class={`rounded-full px-4 py-2 transition ${isTasks ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
         >
           Tasks
         </a>
         <a
-          href="/tags"
-          class={`rounded-full px-4 py-2 transition ${isTags ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+          href="/library"
+          class={`rounded-full px-4 py-2 transition ${isLibrary ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
         >
-          Tags
+          Library
         </a>
         {#if authState?.user}
-          <div class="hidden items-center gap-3 text-slate-600 sm:flex">
-            <span>{authState.user.display_name ?? authState.user.email}</span>
-            <button
-              type="button"
-              on:click={logout}
-              class="rounded-full border border-slate-200 px-4 py-2 text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-            >
-              Log out
-            </button>
-          </div>
+          <a
+            href="/me"
+            class={`hidden rounded-full px-4 py-2 text-sm transition sm:flex ${
+              isMe ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            {authState.user.display_name ?? authState.user.email}
+          </a>
         {:else}
           <div class="flex items-center gap-2">
             <a

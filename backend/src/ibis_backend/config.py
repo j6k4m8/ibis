@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     allow_origins: list[str] = ["http://localhost:5173"]
     secret_key: str = "dev-secret-change-me"
     access_token_expire_minutes: int = 60 * 24
+    public_base_url: str = "http://localhost:8000"
+    upload_dir: str = "./uploads"
+    upload_max_bytes: int = 100 * 1024 * 1024
+    storage_limit_bytes: int = 5 * 1024 * 1024 * 1024
+    fetch_video_titles: bool = True
 
 
 @lru_cache

@@ -20,4 +20,5 @@ describe('renderMarkdownPreview', () => {
     expect(html).toContain('data-timestamp="1:23"');
     expect(html).toContain('data-segment-start="0:10"');
   });
+
 });

@@ -1,4 +1,4 @@
-import type { AuthResponse, Note, NoteVersion, Task, User } from './types';
+import type { AuthResponse, Me, Note, NoteVersion, Task, User, Video } from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE_URL;
@@ -20,7 +20,9 @@ async function request<T>(
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
 
-  if (options.body && !headers.has('Content-Type')) {
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
+  if (options.body && !headers.has('Content-Type') && !isFormData) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -77,8 +79,18 @@ export async function me(token: string): Promise<User> {
   return request<User>('/auth/me', {}, token);
 }
 
-export async function listNotes(token: string): Promise<Note[]> {
-  return request<Note[]>('/notes', {}, token);
+export async function getMe(token: string): Promise<Me> {
+  return request<Me>('/me', {}, token);
+}
+
+export async function listNotes(
+  token: string,
+  params?: { video_id?: string },
+): Promise<Note[]> {
+  const searchParams = params?.video_id
+    ? `?video_id=${encodeURIComponent(params.video_id)}`
+    : '';
+  return request<Note[]>(`/notes${searchParams}`, {}, token);
 }
 
 export async function getNote(token: string, noteId: string): Promise<Note> {
@@ -92,6 +104,8 @@ export async function createNote(
     body?: string;
     tags?: string[];
     video_url?: string;
+    video_id?: string;
+    video_title?: string;
     video_start_seconds?: number | null;
     video_end_seconds?: number | null;
   },
@@ -142,6 +156,49 @@ export async function getNoteVersion(
 
 export async function listTasks(token: string): Promise<Task[]> {
   return request<Task[]>('/tasks', {}, token);
+}
+
+export async function listVideos(token: string): Promise<Video[]> {
+  return request<Video[]>('/videos', {}, token);
+}
+
+export async function getVideo(token: string, videoId: string): Promise<Video> {
+  return request<Video>(`/videos/${videoId}`, {}, token);
+}
+
+export async function uploadVideo(
+  token: string,
+  file: File,
+  title?: string,
+): Promise<Video> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (title) {
+    formData.append('title', title);
+  }
+  return request<Video>(
+    '/videos/upload',
+    {
+      method: 'POST',
+      body: formData,
+    },
+    token,
+  );
+}
+
+export async function updateVideo(
+  token: string,
+  videoId: string,
+  payload: { title?: string },
+): Promise<Video> {
+  return request<Video>(
+    `/videos/${videoId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
 }
 
 export async function updateTask(

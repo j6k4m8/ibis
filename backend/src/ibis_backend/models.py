@@ -45,6 +45,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     notes: Mapped[list["Note"]] = relationship(back_populates="user")
+    videos: Mapped[list["Video"]] = relationship(back_populates="user")
 
 
 class Classroom(Base):
@@ -80,11 +81,16 @@ class Video(Base):
     storage_key: Mapped[Optional[str]] = mapped_column(String(1024))
     title: Mapped[Optional[str]] = mapped_column(String(255))
     duration_seconds: Mapped[Optional[int]] = mapped_column(Integer)
+    file_size_bytes: Mapped[Optional[int]] = mapped_column(Integer)
+    original_filename: Mapped[Optional[str]] = mapped_column(String(255))
+    mime_type: Mapped[Optional[str]] = mapped_column(String(255))
     extra_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     notes: Mapped[list["Note"]] = relationship(back_populates="video")
+    user: Mapped[User] = relationship(back_populates="videos")
 
 
 class Note(Base):

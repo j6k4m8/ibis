@@ -14,7 +14,6 @@ TASK_LINE_REGEX = re.compile(
     r"^(?P<indent>\s*)(?P<bullet>[-*+])\s*\[(?P<checked>[ xX])\](?P<space>\s*)(?P<text>.*)$"
 )
 
-
 @dataclass(frozen=True)
 class ParsedTask:
     """Parsed task line details."""
@@ -24,6 +23,7 @@ class ParsedTask:
     line_index: int
     raw_line: str
     key: str
+    has_marker: bool
 
 
 def normalize_task_text(text: str) -> str:
@@ -55,7 +55,12 @@ def parse_task_lines(body: str) -> list[ParsedTask]:
         match = TASK_LINE_REGEX.match(line)
         if not match:
             continue
-        text = match.group("text")
+        raw_text = match.group("text")
+        text = raw_text
+        has_marker = False
+        if "<!--" in raw_text:
+            text = re.sub(r"\s*<!--.*?-->\s*$", "", raw_text).rstrip()
+            has_marker = text != raw_text
         tasks.append(
             ParsedTask(
                 text=text,
@@ -63,6 +68,7 @@ def parse_task_lines(body: str) -> list[ParsedTask]:
                 line_index=index,
                 raw_line=line,
                 key=normalize_task_text(text),
+                has_marker=has_marker,
             )
         )
     return tasks
@@ -86,6 +92,8 @@ def update_task_line(line: str, completed: bool) -> str:
     bullet = match.group("bullet")
     space = match.group("space") or " "
     text = match.group("text")
+    if "<!--" in text:
+        text = re.sub(r"\s*<!--.*?-->\s*$", "", text).rstrip()
     check = "x" if completed else " "
     return f"{indent}{bullet} [{check}]{space}{text}"
 
@@ -112,6 +120,8 @@ def sync_tasks_for_note(note: Note, db: Session) -> None:
 
     now = utcnow()
     occurrence_counts: dict[str, int] = defaultdict(int)
+    lines = note.body.splitlines()
+    body_changed = False
 
     for parsed_task in parsed:
         key = parsed_task.key
@@ -135,9 +145,18 @@ def sync_tasks_for_note(note: Note, db: Session) -> None:
             )
             db.add(task)
 
+        if parsed_task.has_marker:
+            lines[parsed_task.line_index] = update_task_line(
+                parsed_task.raw_line, parsed_task.completed
+            )
+            body_changed = True
+
     for tasks in existing_by_key.values():
         for task in tasks:
             db.delete(task)
+
+    if body_changed:
+        note.body = "\n".join(lines)
 
 
 def apply_task_completion(note: Note, task: Task, completed: bool) -> bool:

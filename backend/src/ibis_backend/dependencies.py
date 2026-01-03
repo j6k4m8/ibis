@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    token: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> User:
     """Resolve the current user from the bearer token.
@@ -30,7 +31,8 @@ def get_current_user(
         HTTPException: If authentication fails.
     """
 
-    if credentials is None:
+    token_value = credentials.credentials if credentials else token
+    if token_value is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
@@ -38,7 +40,7 @@ def get_current_user(
         )
 
     try:
-        user_id = decode_access_token(credentials.credentials)
+        user_id = decode_access_token(token_value)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

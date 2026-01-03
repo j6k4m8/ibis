@@ -18,6 +18,28 @@ class UserRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class VideoRead(BaseModel):
+    """Serialized video response."""
+
+    id: str
+    title: Optional[str] = None
+    source_type: str
+    video_url: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    original_filename: Optional[str] = None
+    mime_type: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class VideoUpdate(BaseModel):
+    """Payload to update a video."""
+
+    title: Optional[str] = Field(None, max_length=255)
+
+
 class TokenResponse(BaseModel):
     """Token response payload."""
 
@@ -31,6 +53,14 @@ class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserRead
+
+
+class MeRead(BaseModel):
+    """Serialized response for the /me endpoint."""
+
+    user: UserRead
+    storage_used_bytes: int
+    storage_limit_bytes: int
 
 
 class RegisterRequest(BaseModel):
@@ -55,6 +85,8 @@ class NoteCreate(BaseModel):
     body: str = ""
     tags: list[str] = Field(default_factory=list)
     video_url: Optional[str] = None
+    video_id: Optional[str] = None
+    video_title: Optional[str] = Field(None, max_length=255)
     video_start_seconds: Optional[float] = Field(None, ge=0)
     video_end_seconds: Optional[float] = Field(None, ge=0)
 
@@ -80,6 +112,9 @@ class NoteRead(BaseModel):
     archived: bool
     created_at: datetime
     updated_at: datetime
+    video_id: Optional[str] = None
+    video_title: Optional[str] = None
+    video_source_type: Optional[str] = None
     video_url: Optional[str] = None
     video_start_seconds: Optional[float] = None
     video_end_seconds: Optional[float] = None

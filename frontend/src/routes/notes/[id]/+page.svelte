@@ -38,6 +38,7 @@
   let videoStartText = '';
   let videoEndText = '';
   let videoElement: HTMLVideoElement | null = null;
+  let resolvedVideoUrl: string | null = null;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -408,6 +409,16 @@
   $: noteTags = parseTags(tagsText);
   $: segments = parseSegments(body);
   $: youtubeId = note?.video_url ? getYouTubeId(note.video_url) : null;
+  $: resolvedVideoUrl = note?.video_url ?? null;
+  $: if (note?.video_source_type === 'local') {
+    if (note.video_url && token) {
+      const url = new URL(note.video_url);
+      url.searchParams.set('token', token);
+      resolvedVideoUrl = url.toString();
+    } else {
+      resolvedVideoUrl = null;
+    }
+  }
   $: if (youtubeId && youtubeContainer && youtubeId !== youtubePlayerId) {
     initializeYouTubePlayer(youtubeId);
   }
@@ -461,19 +472,19 @@
         </div>
 
         <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-          {#if note.video_url}
-            {#if youtubeId}
-              <div class="aspect-video w-full" bind:this={youtubeContainer}></div>
-            {:else}
-              <video
-                bind:this={videoElement}
-                class="aspect-video w-full"
-                src={note.video_url}
-                controls
-                on:loadedmetadata={handleVideoLoaded}
-                on:timeupdate={handleVideoTimeUpdate}
-              ></video>
-            {/if}
+        {#if note.video_url}
+          {#if youtubeId}
+            <div class="aspect-video w-full" bind:this={youtubeContainer}></div>
+          {:else}
+            <video
+              bind:this={videoElement}
+              class="aspect-video w-full"
+              src={resolvedVideoUrl}
+              controls
+              on:loadedmetadata={handleVideoLoaded}
+              on:timeupdate={handleVideoTimeUpdate}
+            ></video>
+          {/if}
           {:else}
             <div class="flex h-64 items-center justify-center text-sm text-slate-400">
               Add a video link to start syncing timestamps.
@@ -483,7 +494,12 @@
 
         {#if note.video_url}
           <div class="mt-3 text-xs text-slate-500">
-            <a href={note.video_url} target="_blank" rel="noreferrer" class="hover:underline">
+            <a
+              href={resolvedVideoUrl}
+              target="_blank"
+              rel="noreferrer"
+              class="hover:underline"
+            >
               {note.video_url}
             </a>
           </div>
@@ -565,7 +581,7 @@
             <div class="flex flex-wrap gap-2">
               {#each noteTags as tag}
                 <a
-                  href={`/tags?tag=${encodeURIComponent(tag)}`}
+                  href={`/library/tags?tag=${encodeURIComponent(tag)}`}
                   class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500 hover:border-orange-200 hover:text-orange-700"
                 >
                   #{tag}

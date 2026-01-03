@@ -88,3 +88,7 @@ export function renderMarkdownPreview(input: string, maxLines = 3): string {
 
   return html;
 }
+
+export function renderMarkdown(input: string): string {
+  return renderMarkdownPreview(input, Number.POSITIVE_INFINITY);
+}

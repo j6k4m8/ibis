@@ -6,6 +6,7 @@
   import * as api from '$lib/api';
   import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
   import { authStore } from '$lib/stores/auth';
+  import { renderMarkdown, renderMarkdownPreview } from '$lib/utils/markdownPreview';
   import { formatTimestamp, parseTimestamp } from '$lib/utils/timestamps';
   import type { Note, NoteVersion } from '$lib/types';
 
@@ -258,6 +259,7 @@
     : lastSavedAt
       ? `Saved ${lastSavedAt.toLocaleTimeString()}`
       : 'Not saved yet';
+  $: recentVersions = versions.slice(0, 3);
 </script>
 
 <svelte:head>
@@ -406,22 +408,33 @@
       <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
         <div class="flex items-center justify-between">
           <h2 class="text-xl">History</h2>
-          <span class="text-xs text-slate-500">{versions.length} snapshots</span>
+          <div class="flex items-center gap-3 text-xs text-slate-500">
+            <span>{versions.length} snapshots</span>
+            <a href={`/notes/${note.id}/history`} class="hover:underline">
+              View all
+            </a>
+          </div>
         </div>
         <div class="mt-4 space-y-3">
-          {#if versions.length === 0}
+          {#if recentVersions.length === 0}
             <div class="text-sm text-slate-500">No history yet.</div>
           {:else}
-            {#each versions as version}
+            {#each recentVersions as version}
               <button
                 type="button"
                 on:click={() => (versionPreview = version)}
                 class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
               >
-                <div class="text-xs text-slate-500">
+                <div class="text-xs font-semibold text-slate-500">
                   {new Date(version.created_at).toLocaleString()}
                 </div>
-                <div class="font-semibold text-slate-900">{version.title}</div>
+                {#if version.body}
+                  <div class="ibis-markdown mt-2 text-sm text-slate-700">
+                    {@html renderMarkdownPreview(version.body, 2)}
+                  </div>
+                {:else}
+                  <div class="mt-1 text-sm text-slate-400">Empty snapshot</div>
+                {/if}
               </button>
             {/each}
           {/if}
@@ -443,8 +456,13 @@
           <div class="mt-3 text-xs text-orange-700">
             {new Date(versionPreview.created_at).toLocaleString()}
           </div>
-          <div class="mt-2 text-lg font-semibold text-slate-900">{versionPreview.title}</div>
-          <p class="mt-2 whitespace-pre-wrap text-sm text-slate-700">{versionPreview.body}</p>
+          {#if versionPreview.body}
+            <div class="ibis-markdown mt-3 text-sm text-slate-700">
+              {@html renderMarkdown(versionPreview.body)}
+            </div>
+          {:else}
+            <div class="mt-3 text-sm text-slate-400">Empty snapshot</div>
+          {/if}
         </div>
       {/if}
     </div>

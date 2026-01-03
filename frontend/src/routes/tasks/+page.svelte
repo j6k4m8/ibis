@@ -142,7 +142,15 @@
             </div>
             <div class="text-right text-[11px] text-slate-400">
               <div class="uppercase tracking-widest">{task.completed ? 'Done' : 'Open'}</div>
-              <div>{new Date(task.created_at).toLocaleDateString()}</div>
+              <div>
+                {new Date(task.created_at).toLocaleString(undefined, {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </div>
             </div>
           </div>
       {/each}

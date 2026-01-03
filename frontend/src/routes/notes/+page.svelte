@@ -17,6 +17,9 @@
   let tagsText = '';
   let body = '';
   let creating = false;
+  let modalOpen = false;
+  let selectedTag = 'all';
+  let sortOption: 'updated' | 'created' | 'title' = 'updated';
 
   let token: string | null = null;
 
@@ -55,6 +58,22 @@
     }
   }
 
+  function closeModal() {
+    modalOpen = false;
+  }
+
+  function handleOverlayClick(event: MouseEvent) {
+    if (event.currentTarget === event.target) {
+      closeModal();
+    }
+  }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      closeModal();
+    }
+  }
+
   async function createNote() {
     if (!token) {
       return;
@@ -74,6 +93,7 @@
       videoUrl = '';
       tagsText = '';
       body = '';
+      modalOpen = false;
       await loadNotes(token);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to create note.';
@@ -82,141 +102,207 @@
     }
   }
 
-  $: filteredNotes =
-    searchQuery.trim().length === 0
-      ? notes
-      : notes.filter((note) => {
-          const query = searchQuery.toLowerCase();
-          return (
-            note.title.toLowerCase().includes(query) ||
-            note.body.toLowerCase().includes(query) ||
-            note.tags.some((tag) => tag.toLowerCase().includes(query))
-          );
-        });
+  $: availableTags = Array.from(new Set(notes.flatMap((note) => note.tags))).sort();
+
+  $: filteredNotes = notes.filter((note) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesQuery =
+      query.length === 0 ||
+      note.title.toLowerCase().includes(query) ||
+      note.body.toLowerCase().includes(query) ||
+      note.tags.some((tag) => tag.toLowerCase().includes(query));
+    const matchesTag = selectedTag === 'all' || note.tags.includes(selectedTag);
+    return matchesQuery && matchesTag;
+  });
+
+  $: sortedNotes = [...filteredNotes].sort((a, b) => {
+    if (sortOption === 'created') {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    if (sortOption === 'title') {
+      return a.title.localeCompare(b.title);
+    }
+    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+  });
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
 
 <svelte:head>
   <title>Notes · Ibis</title>
 </svelte:head>
 
-<section class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-  <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
-    <div class="flex items-center justify-between">
+<section class="space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
       <h1 class="text-2xl">Your notes</h1>
-      <span class="text-xs text-slate-500">{notes.length} total</span>
+      <p class="text-sm text-slate-500">{notes.length} total</p>
     </div>
+    <button
+      type="button"
+      class="rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-400"
+      on:click={() => (modalOpen = true)}
+    >
+      New lesson
+    </button>
+  </div>
 
-    <div class="mt-4">
-      <input
-        class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-        type="search"
-        bind:value={searchQuery}
-        placeholder="Search notes, tags, or text"
-      />
-    </div>
-
-    {#if error}
-      <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
-        {error}
-      </div>
-    {/if}
-
-    <div class="mt-6 space-y-3">
-      {#if loading}
-        <div class="text-sm text-slate-500">Loading notes...</div>
-      {:else if filteredNotes.length === 0}
-        <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-          No notes yet. Create your first lesson note to get started.
-        </div>
-      {:else}
-        {#each filteredNotes as note}
-          <a
-            href={`/notes/${note.id}`}
-            class="block rounded-2xl border border-transparent bg-slate-50 px-4 py-4 transition hover:border-slate-200 hover:bg-white"
-          >
-            <div class="flex items-center justify-between text-xs text-slate-500">
-              <span>{new Date(note.updated_at).toLocaleString()}</span>
-              {#if note.tags.length > 0}
-                <span class="rounded-full bg-orange-100 px-2 py-1 text-[10px] uppercase tracking-widest text-orange-700">
-                  {note.tags.length} tags
-                </span>
-              {/if}
-            </div>
-            <div class="mt-2 text-lg font-semibold text-slate-900">{note.title}</div>
-            {#if note.body}
-              <div class="ibis-markdown mt-1 text-sm text-slate-600">
-                {@html renderMarkdownPreview(note.body, 3)}
-              </div>
-            {:else}
-              <p class="mt-1 text-sm text-slate-600">No notes yet. Click to start writing.</p>
-            {/if}
-            {#if note.tags.length > 0}
-              <div class="mt-3 flex flex-wrap gap-2">
-                {#each note.tags as tag}
-                  <a
-                    href={`/tags?tag=${encodeURIComponent(tag)}`}
-                    class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500 hover:border-orange-200 hover:text-orange-700"
-                  >
-                    #{tag}
-                  </a>
-                {/each}
-              </div>
-            {/if}
-          </a>
+  <div class="grid gap-3 lg:grid-cols-[2fr_1fr_1fr]">
+    <input
+      class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+      type="search"
+      bind:value={searchQuery}
+      placeholder="Search notes, tags, or text"
+    />
+    <div class="relative">
+      <select
+        class="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+        bind:value={selectedTag}
+      >
+        <option value="all">All tags</option>
+        {#each availableTags as tag}
+          <option value={tag}>{tag}</option>
         {/each}
-      {/if}
+      </select>
+      <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+        ▾
+      </span>
+    </div>
+    <div class="relative">
+      <select
+        class="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+        bind:value={sortOption}
+      >
+        <option value="updated">Recently updated</option>
+        <option value="created">Recently created</option>
+        <option value="title">Title A-Z</option>
+      </select>
+      <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+        ▾
+      </span>
     </div>
   </div>
 
-  <div class="rounded-3xl border border-orange-100 bg-white/90 p-6 shadow-xl">
-    <h2 class="text-2xl">Create a new lesson</h2>
-    <p class="mt-2 text-sm text-slate-500">Add a title, optional video link, and tags.</p>
+  {#if error}
+    <div class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+      {error}
+    </div>
+  {/if}
 
-    <form class="mt-6 space-y-4" on:submit|preventDefault={createNote}>
-      <label class="block text-sm text-slate-600">
-        Title
-        <input
-          class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-          type="text"
-          bind:value={title}
-          placeholder="Lesson title"
-          required
-        />
-      </label>
-      <label class="block text-sm text-slate-600">
-        Video link
-        <input
-          class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-          type="url"
-          bind:value={videoUrl}
-          placeholder="https://youtube.com/..."
-        />
-      </label>
-      <label class="block text-sm text-slate-600">
-        Tags (comma separated)
-        <input
-          class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-          type="text"
-          bind:value={tagsText}
-          placeholder="technique, rhythm, harmony"
-        />
-      </label>
-      <label class="block text-sm text-slate-600">
-        Starter notes
-        <textarea
-          class="mt-2 min-h-[140px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-          bind:value={body}
-          placeholder="Write a quick outline or leave blank."
-        ></textarea>
-      </label>
-
-      <button
-        type="submit"
-        class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-400 disabled:translate-y-0 disabled:opacity-60"
-        disabled={creating || !title}
-      >
-        {creating ? 'Creating...' : 'Create note'}
-      </button>
-    </form>
+  <div class="grid gap-4 lg:grid-cols-2">
+    {#if loading}
+      <div class="rounded-2xl border border-slate-200 bg-white/70 px-6 py-8 text-sm text-slate-500">
+        Loading notes...
+      </div>
+    {:else if sortedNotes.length === 0}
+      <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+        No notes yet. Create your first lesson note to get started.
+      </div>
+    {:else}
+      {#each sortedNotes as note}
+        <a
+          href={`/notes/${note.id}`}
+          class="group block rounded-3xl border border-slate-200 bg-white/90 px-6 py-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+        >
+          <div class="flex items-center justify-between text-xs text-slate-500">
+            <span>{new Date(note.updated_at).toLocaleString()}</span>
+            {#if note.tags.length > 0}
+              <span class="rounded-full bg-orange-100 px-2 py-1 text-[10px] uppercase tracking-widest text-orange-700">
+                {note.tags.length} tags
+              </span>
+            {/if}
+          </div>
+          <div class="mt-2 text-lg font-semibold text-slate-900 group-hover:text-orange-700">
+            {note.title}
+          </div>
+          {#if note.body}
+            <div class="ibis-markdown mt-1 text-sm text-slate-600">
+              {@html renderMarkdownPreview(note.body, 3)}
+            </div>
+          {:else}
+            <p class="mt-1 text-sm text-slate-600">No notes yet. Click to start writing.</p>
+          {/if}
+          {#if note.tags.length > 0}
+            <div class="mt-3 flex flex-wrap gap-2">
+              {#each note.tags as tag}
+                <span class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500">
+                  #{tag}
+                </span>
+              {/each}
+            </div>
+          {/if}
+        </a>
+      {/each}
+    {/if}
   </div>
 </section>
+
+{#if modalOpen}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-10"
+    on:click={handleOverlayClick}
+  >
+    <div class="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl">Create a new lesson</h2>
+          <p class="mt-1 text-sm text-slate-500">Add a title, optional video link, and tags.</p>
+        </div>
+        <button
+          type="button"
+          class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+          on:click={closeModal}
+        >
+          Close
+        </button>
+      </div>
+
+      <form class="mt-6 space-y-4" on:submit|preventDefault={createNote}>
+        <label class="block text-sm text-slate-600">
+          Title
+          <input
+            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+            type="text"
+            bind:value={title}
+            placeholder="Lesson title"
+            required
+          />
+        </label>
+        <label class="block text-sm text-slate-600">
+          Video link
+          <input
+            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+            type="url"
+            bind:value={videoUrl}
+            placeholder="https://youtube.com/..."
+          />
+        </label>
+        <label class="block text-sm text-slate-600">
+          Tags (comma separated)
+          <input
+            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+            type="text"
+            bind:value={tagsText}
+            placeholder="technique, rhythm, harmony"
+          />
+        </label>
+        <label class="block text-sm text-slate-600">
+          Starter notes
+          <textarea
+            class="mt-2 min-h-[140px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+            bind:value={body}
+            placeholder="Write a quick outline or leave blank."
+          ></textarea>
+        </label>
+
+        <button
+          type="submit"
+          class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-400 disabled:translate-y-0 disabled:opacity-60"
+          disabled={creating || !title}
+        >
+          {creating ? 'Creating...' : 'Create note'}
+        </button>
+      </form>
+    </div>
+  </div>
+{/if}

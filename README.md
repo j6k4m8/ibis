@@ -7,6 +7,7 @@ Modern rewrite of the Ibis lesson annotation app.
 - Login/register UI with local token persistence.
 - Notes list + detail editing with history snapshot preview.
 - Video link preview with YouTube embed support.
+- Tasks page that aggregates checklist items from notes.
 
 ## Dev servers
 

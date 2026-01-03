@@ -9,6 +9,7 @@
   let notes: Note[] = [];
   let loading = true;
   let error = '';
+  let searchQuery = '';
 
   let title = '';
   let videoUrl = '';
@@ -79,6 +80,18 @@
       creating = false;
     }
   }
+
+  $: filteredNotes =
+    searchQuery.trim().length === 0
+      ? notes
+      : notes.filter((note) => {
+          const query = searchQuery.toLowerCase();
+          return (
+            note.title.toLowerCase().includes(query) ||
+            note.body.toLowerCase().includes(query) ||
+            note.tags.some((tag) => tag.toLowerCase().includes(query))
+          );
+        });
 </script>
 
 <svelte:head>
@@ -92,6 +105,15 @@
       <span class="text-xs text-slate-500">{notes.length} total</span>
     </div>
 
+    <div class="mt-4">
+      <input
+        class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+        type="search"
+        bind:value={searchQuery}
+        placeholder="Search notes, tags, or text"
+      />
+    </div>
+
     {#if error}
       <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
         {error}
@@ -101,26 +123,37 @@
     <div class="mt-6 space-y-3">
       {#if loading}
         <div class="text-sm text-slate-500">Loading notes...</div>
-      {:else if notes.length === 0}
+      {:else if filteredNotes.length === 0}
         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
           No notes yet. Create your first lesson note to get started.
         </div>
       {:else}
-        {#each notes as note}
+        {#each filteredNotes as note}
           <a
             href={`/notes/${note.id}`}
             class="block rounded-2xl border border-transparent bg-slate-50 px-4 py-4 transition hover:border-slate-200 hover:bg-white"
           >
             <div class="flex items-center justify-between text-xs text-slate-500">
               <span>{new Date(note.updated_at).toLocaleString()}</span>
-              <span class="rounded-full bg-orange-100 px-2 py-1 text-[10px] uppercase tracking-widest text-orange-700">
-                {note.tags.length} tags
-              </span>
+              {#if note.tags.length > 0}
+                <span class="rounded-full bg-orange-100 px-2 py-1 text-[10px] uppercase tracking-widest text-orange-700">
+                  {note.tags.length} tags
+                </span>
+              {/if}
             </div>
             <div class="mt-2 text-lg font-semibold text-slate-900">{note.title}</div>
             <p class="mt-1 text-sm text-slate-600">
               {note.body || 'No notes yet. Click to start writing.'}
             </p>
+            {#if note.tags.length > 0}
+              <div class="mt-3 flex flex-wrap gap-2">
+                {#each note.tags as tag}
+                  <span class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500">
+                    #{tag}
+                  </span>
+                {/each}
+              </div>
+            {/if}
           </a>
         {/each}
       {/if}
@@ -135,7 +168,7 @@
       <label class="block text-sm text-slate-600">
         Title
         <input
-          class="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-orange-300 focus:outline-none"
+          class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
           type="text"
           bind:value={title}
           placeholder="Lesson title"
@@ -145,7 +178,7 @@
       <label class="block text-sm text-slate-600">
         Video link
         <input
-          class="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-orange-300 focus:outline-none"
+          class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
           type="url"
           bind:value={videoUrl}
           placeholder="https://youtube.com/..."
@@ -154,7 +187,7 @@
       <label class="block text-sm text-slate-600">
         Tags (comma separated)
         <input
-          class="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-orange-300 focus:outline-none"
+          class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
           type="text"
           bind:value={tagsText}
           placeholder="technique, rhythm, harmony"
@@ -163,7 +196,7 @@
       <label class="block text-sm text-slate-600">
         Starter notes
         <textarea
-          class="mt-2 min-h-[140px] w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-orange-300 focus:outline-none"
+          class="mt-2 min-h-[140px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
           bind:value={body}
           placeholder="Write a quick outline or leave blank."
         ></textarea>
@@ -171,7 +204,7 @@
 
       <button
         type="submit"
-        class="w-full rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-400 disabled:opacity-60"
+        class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-400 disabled:translate-y-0 disabled:opacity-60"
         disabled={creating || !title}
       >
         {creating ? 'Creating...' : 'Create note'}

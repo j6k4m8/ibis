@@ -10,7 +10,8 @@
 - [ ] Build video segmenter (timeline UI, save segments, FFmpeg clip worker)
 - [ ] Add transcription pipeline (Whisper worker, searchable transcript index, auto-tags)
 - [x] Build auth UI (login/register) and notes list/detail screens
-- [ ] Build SvelteKit UI (editor, video viewer controls, tasks, search, tags, history)
+- [ ] Build SvelteKit UI (editor, video viewer controls, tags, history)
+- [x] Add tasks view and search filter in notes UI
 - [ ] Add tests coverage for API, workers, and frontend
 - [ ] Add deployment configs for Fly.io and k8s (containers, env, migrations)
 

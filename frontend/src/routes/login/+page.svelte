@@ -38,7 +38,7 @@
   <div class="space-y-3">
     <p class="text-xs uppercase tracking-[0.4em] text-slate-400">Welcome back</p>
     <h1 class="text-3xl sm:text-4xl">Sign in to Ibis</h1>
-    <p class="text-sm text-slate-600">Keep lesson notes, video links, and history in one place.</p>
+    <p class="text-sm text-slate-600">Keep notes, video links, and history in one place.</p>
   </div>
 
   <form class="mt-8 space-y-5" on:submit|preventDefault={submit}>

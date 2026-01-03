@@ -18,7 +18,7 @@
 -   [x] on video page, show the title (editable) large above video instead of "Lesson Video". show small video link underneath the video. remove title editor from right pane (where tags are also listed), just do tags there.
 -   [x] "history" should use date as header, not title. and show just the last 3 snapshots, with a "view all" link to see the full history page for that note at /notes/{id}/history
 -   [x] on the "tasks" page include the date of creation on the task list row.
--   [x] change "create new lesson" from a card on the notes page to a button in the top right that opens a modal dialog to enter info. then make the notes page more elegant, searchable, filterable, orderable...
+-   [x] change "create new note" from a card on the notes page to a button in the top right that opens a modal dialog to enter info. then make the notes page more elegant, searchable, filterable, orderable...
 -   [x] Build FastAPI core (notes CRUD, note history, videos, tags, search)
 -   [x] when you check off a todo item on the tasks page, it should animate a strikethrough effect on the text, and then fade out after like 1 second, rather than just instantly disappearing.
 -   [ ] Add realtime collaboration (Yjs over WebSocket, storage of updates, presence)
@@ -32,12 +32,21 @@
 -   [x] Persist tasks with creation timestamps + toggle from editor/tasks page
 -   [x] Add tags navigation page and tag deep-links
 -   [x] Add markdown editor preview with timestamp tokens
--   [x] Add stable task IDs in markdown to preserve task identity across edits
+-   [x] Add delete action for videos (block if notes are attached)
 -   [ ] Add tests coverage for API, workers, and frontend
 -   [ ] Add deployment configs for Fly.io and k8s (containers, env, migrations)
+-   [ ] Transcription + transcoding pipeline (Whisper + FFmpeg)
+    -   [ ] Add background job queue for media processing (local, optional Redis)
+    -   [ ] Implement transcoding worker (max 1080p, filesize reduction, configurable)
+    -   [ ] Implement transcription worker (Whisper CLI/Docker), store caption chunks with timestamps
+    -   [ ] Add bulk upload dropzone with queue/progress + auto title
+    -   [x] Render captions under video with karaoke-style highlight + click-to-seek
+    -   [ ] Add graceful fallbacks when processing services are disabled
+    -   [ ] Support running workers via CLI or Docker/K8s
 
 ## Bugs
 
 ## Feature Backlog
 
 -   Add optional video transcoding to reduce file sizes after upload (auto or manual).
+-   Revisit stable task IDs that do not render in the editor.

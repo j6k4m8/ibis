@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 os.environ.setdefault("IBIS_DATABASE_URL", "sqlite://")
 os.environ.setdefault("IBIS_FETCH_VIDEO_TITLES", "false")
+os.environ.setdefault("IBIS_PROCESSING_ENABLED", "false")
 
 from ibis_backend.app import create_app
 from ibis_backend.db import Base, SessionLocal, init_db

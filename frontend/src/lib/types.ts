@@ -62,3 +62,24 @@ export type Me = {
   storage_used_bytes: number;
   storage_limit_bytes: number;
 };
+
+export type Job = {
+  id: string;
+  video_id: string;
+  job_type: string;
+  status: string;
+  progress?: number | null;
+  detail?: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+};
+
+export type TranscriptChunk = {
+  id: string;
+  start_seconds: number;
+  end_seconds: number;
+  text: string;
+  created_at: string;
+};

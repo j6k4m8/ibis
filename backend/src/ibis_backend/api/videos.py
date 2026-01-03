@@ -5,15 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from ibis_backend.config import get_settings
 from ibis_backend.db import get_db
 from ibis_backend.dependencies import get_current_user
-from ibis_backend.models import User, Video, utcnow
-from ibis_backend.schemas import VideoRead, VideoUpdate
+from ibis_backend.models import Note, ProcessingJob, TranscriptChunk, User, Video, utcnow
+from ibis_backend.schemas import TranscriptChunkRead, VideoRead, VideoUpdate
 
 router = APIRouter()
 
@@ -159,7 +159,10 @@ async def upload_video(
         destination.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    display_title = (title or "").strip() or Path(file.filename).stem
+    if title and title.strip():
+        display_title = title.strip()
+    else:
+        display_title = utcnow().strftime("%Y-%m-%d %H:%M")
     video = Video(
         source_type="local",
         source_url=None,
@@ -176,6 +179,28 @@ async def upload_video(
     db.add(video)
     db.commit()
     db.refresh(video)
+
+    settings = get_settings()
+    if settings.processing_enabled:
+        job_types: list[str] = []
+        if settings.transcode_enabled:
+            job_types.append("transcode")
+        if settings.transcription_enabled:
+            job_types.append("transcribe")
+        if job_types:
+            now = utcnow()
+            for job_type in job_types:
+                db.add(
+                    ProcessingJob(
+                        video_id=video.id,
+                        job_type=job_type,
+                        status="queued",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+            db.commit()
+            db.refresh(video)
 
     return video_to_read(video)
 
@@ -254,3 +279,84 @@ def stream_video(
         media_type=video.mime_type or "application/octet-stream",
         filename=video.original_filename,
     )
+
+
+@router.get("/{video_id}/transcript", response_model=list[TranscriptChunkRead])
+def list_transcript_chunks(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[TranscriptChunkRead]:
+    """List transcript chunks for a video.
+
+    Args:
+        video_id: Video ID.
+        current_user: Authenticated user.
+        db: Database session.
+
+    Returns:
+        list[TranscriptChunkRead]: Transcript chunks ordered by start time.
+    """
+
+    video = (
+        db.query(Video)
+        .filter(Video.id == video_id)
+        .filter(Video.user_id == current_user.id)
+        .first()
+    )
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    chunks = (
+        db.query(TranscriptChunk)
+        .filter(TranscriptChunk.video_id == video.id)
+        .order_by(TranscriptChunk.start_seconds.asc())
+        .all()
+    )
+    return [TranscriptChunkRead.model_validate(chunk) for chunk in chunks]
+
+
+@router.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_video(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Delete a video from the library if it has no linked notes.
+
+    Args:
+        video_id: Video ID.
+        current_user: Authenticated user.
+        db: Database session.
+
+    Returns:
+        Response: Empty response on success.
+    """
+
+    video = (
+        db.query(Video)
+        .filter(Video.id == video_id)
+        .filter(Video.user_id == current_user.id)
+        .first()
+    )
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    linked_notes = db.query(Note).filter(Note.video_id == video.id).count()
+    if linked_notes > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Video has notes attached.",
+        )
+
+    db.query(ProcessingJob).filter(ProcessingJob.video_id == video.id).delete()
+    db.query(TranscriptChunk).filter(TranscriptChunk.video_id == video.id).delete()
+    db.delete(video)
+    db.commit()
+
+    if video.source_type == "local" and video.storage_key:
+        settings = get_settings()
+        path = Path(settings.upload_dir).expanduser() / video.storage_key
+        path.unlink(missing_ok=True)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

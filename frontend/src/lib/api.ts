@@ -1,4 +1,14 @@
-import type { AuthResponse, Me, Note, NoteVersion, Task, User, Video } from './types';
+import type {
+  AuthResponse,
+  Job,
+  Me,
+  Note,
+  NoteVersion,
+  Task,
+  TranscriptChunk,
+  User,
+  Video,
+} from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE_URL;
@@ -201,6 +211,16 @@ export async function updateVideo(
   );
 }
 
+export async function deleteVideo(token: string, videoId: string): Promise<void> {
+  await request<void>(
+    `/videos/${videoId}`,
+    {
+      method: 'DELETE',
+    },
+    token,
+  );
+}
+
 export async function updateTask(
   token: string,
   taskId: string,
@@ -214,6 +234,17 @@ export async function updateTask(
     },
     token,
   );
+}
+
+export async function listJobs(token: string): Promise<Job[]> {
+  return request<Job[]>('/jobs', {}, token);
+}
+
+export async function listTranscriptChunks(
+  token: string,
+  videoId: string,
+): Promise<TranscriptChunk[]> {
+  return request<TranscriptChunk[]>(`/videos/${videoId}/transcript`, {}, token);
 }
 
 export { ApiError };

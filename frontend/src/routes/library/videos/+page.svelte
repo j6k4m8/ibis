@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
 
   import * as api from '$lib/api';
+  import { ApiError } from '$lib/api';
   import { authStore } from '$lib/stores/auth';
   import type { Video } from '$lib/types';
 
@@ -15,6 +16,7 @@
   let search = '';
   let editingVideoId: string | null = null;
   let editingTitle = '';
+  let deletingVideoId: string | null = null;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -102,6 +104,32 @@
       cancelRename();
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to update video title.';
+    }
+  }
+
+  async function deleteVideo(video: Video) {
+    if (!token) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Delete "${video.title ?? fallbackTitle(video)}"? This cannot be undone.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    deletingVideoId = video.id;
+    error = '';
+    try {
+      await api.deleteVideo(token, video.id);
+      videos = videos.filter((item) => item.id !== video.id);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        error = 'This video is attached to at least one note. Remove those links first.';
+      } else {
+        error = err instanceof Error ? err.message : 'Unable to delete video.';
+      }
+    } finally {
+      deletingVideoId = null;
     }
   }
 
@@ -258,6 +286,14 @@
                   on:click={() => startRename(video)}
                 >
                   Rename
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full border border-red-200 px-3 py-1 text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  on:click={() => deleteVideo(video)}
+                  disabled={deletingVideoId === video.id}
+                >
+                  {deletingVideoId === video.id ? 'Deleting...' : 'Delete'}
                 </button>
               {/if}
             </div>

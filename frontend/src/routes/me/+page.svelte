@@ -4,9 +4,11 @@
 
   import * as api from '$lib/api';
   import { authStore } from '$lib/stores/auth';
-  import type { Me } from '$lib/types';
+  import { initPreferences, navPinned, setNavPinned } from '$lib/stores/preferences';
+  import type { Job, Me } from '$lib/types';
 
-  const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+  // TODO: get from server config
+  const MAX_UPLOAD_BYTES = 1000 * 1024 * 1024;
 
   let token: string | null = null;
   let profile: Me | null = null;
@@ -17,20 +19,42 @@
   let uploadTitle = '';
   let selectedFile: File | null = null;
   let fileInput: HTMLInputElement | null = null;
+  let jobs: Job[] = [];
+  let loadingJobs = false;
+  let jobError = '';
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
+  let navPinnedValue = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
   });
+  const unsubscribePrefs = navPinned.subscribe((value) => {
+    navPinnedValue = value;
+  });
 
   onMount(async () => {
     const state = await authStore.init();
+    initPreferences();
     if (!state.token) {
       unsubscribe();
+      unsubscribePrefs();
       goto('/login');
       return;
     }
     await loadProfile(state.token);
-    return () => unsubscribe();
+    await loadJobs(state.token);
+    pollTimer = setInterval(() => {
+      if (token) {
+        loadJobs(token);
+      }
+    }, 8000);
+    return () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+      }
+      unsubscribe();
+      unsubscribePrefs();
+    };
   });
 
   async function loadProfile(activeToken: string) {
@@ -42,6 +66,18 @@
       error = err instanceof Error ? err.message : 'Unable to load account details.';
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadJobs(activeToken: string) {
+    loadingJobs = true;
+    jobError = '';
+    try {
+      jobs = await api.listJobs(activeToken);
+    } catch (err) {
+      jobError = err instanceof Error ? err.message : 'Unable to load processing jobs.';
+    } finally {
+      loadingJobs = false;
     }
   }
 
@@ -95,6 +131,7 @@
         fileInput.value = '';
       }
       await loadProfile(token);
+      await loadJobs(token);
     } catch (err) {
       uploadError = err instanceof Error ? err.message : 'Unable to upload video.';
     } finally {
@@ -107,9 +144,18 @@
     goto('/login');
   }
 
+  function handleNavPinnedChange(event: Event) {
+    const target = event.currentTarget as HTMLInputElement | null;
+    if (!target) {
+      return;
+    }
+    setNavPinned(target.checked);
+  }
+
   $: storageUsed = profile?.storage_used_bytes ?? 0;
   $: storageLimit = profile?.storage_limit_bytes ?? 1;
   $: usagePercent = Math.min(100, (storageUsed / storageLimit) * 100);
+  $: recentJobs = jobs.slice(0, 6);
 </script>
 
 <svelte:head>
@@ -213,11 +259,73 @@
 
     <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
       <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-slate-900">Processing queue</h2>
+        <span class="text-xs text-slate-500">{jobs.length} jobs</span>
+      </div>
+      <p class="mt-1 text-xs text-slate-500">
+        Uploads process in the background. You can safely leave this page.
+      </p>
+      {#if jobError}
+        <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+          {jobError}
+        </div>
+      {/if}
+      <div class="mt-4 space-y-3">
+        {#if loadingJobs}
+          <div class="text-xs text-slate-500">Loading jobs...</div>
+        {:else if recentJobs.length === 0}
+          <div class="text-xs text-slate-500">No processing jobs yet.</div>
+        {:else}
+          {#each recentJobs as job}
+            <div class="rounded-2xl border border-slate-200 px-4 py-3 text-xs text-slate-600">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-slate-900">
+                  {job.job_type === 'transcode' ? 'Transcoding' : 'Transcription'}
+                </span>
+                <span class="uppercase tracking-widest text-[10px] text-slate-500">
+                  {job.status}
+                </span>
+              </div>
+              <div class="mt-1 text-[11px] text-slate-500">
+                {new Date(job.created_at).toLocaleString()}
+              </div>
+              {#if job.detail}
+                <div class="mt-1 text-[11px] text-slate-400">{job.detail}</div>
+              {/if}
+            </div>
+          {/each}
+        {/if}
+      </div>
+    </div>
+
+    <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
+      <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-slate-900">Video library</h2>
         <a class="text-xs text-orange-600 hover:underline" href="/library">Open library →</a>
       </div>
       <p class="mt-3 text-xs text-slate-500">
         Browse, sort, and rename uploads in the dedicated library view.
+      </p>
+    </div>
+
+    <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-slate-900">Interface</h2>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">
+        Adjust navigation behavior on all pages.
+      </p>
+      <label class="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+        Pin the top navigation bar
+        <input
+          type="checkbox"
+          class="h-4 w-4 accent-orange-500"
+          checked={navPinnedValue}
+          on:change={handleNavPinnedChange}
+        />
+      </label>
+      <p class="mt-2 text-[11px] text-slate-400">
+        When disabled, hover at the top of the page to reveal the navigation.
       </p>
     </div>
   {/if}

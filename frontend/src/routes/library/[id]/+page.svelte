@@ -4,8 +4,10 @@
   import { page } from '$app/stores';
 
   import * as api from '$lib/api';
+  import { ApiError } from '$lib/api';
   import { authStore } from '$lib/stores/auth';
-  import type { Note, Video } from '$lib/types';
+  import type { Note, TranscriptChunk, Video } from '$lib/types';
+  import TranscriptScroller from '$lib/components/TranscriptScroller.svelte';
 
   let token: string | null = null;
   let video: Video | null = null;
@@ -13,12 +15,21 @@
   let error = '';
   let youtubeId: string | null = null;
   let resolvedVideoUrl: string | null = null;
-  let title = '';
+  let videoTitle = '';
+  let noteTitle = '';
   let tagsText = '';
   let creating = false;
   let createdNote: Note | null = null;
   let linkedNotes: Note[] = [];
   let loadingNotes = false;
+  let deleting = false;
+  let editingVideoTitle = false;
+  let savingVideoTitle = false;
+  let transcriptChunks: TranscriptChunk[] = [];
+  let transcriptError = '';
+  let loadingTranscript = false;
+  let activeChunkId: string | null = null;
+  let videoElement: HTMLVideoElement | null = null;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -31,7 +42,11 @@
       goto('/login');
       return;
     }
-    await Promise.all([loadVideo(state.token, $page.params.id), loadLinkedNotes(state.token, $page.params.id)]);
+    await Promise.all([
+      loadVideo(state.token, $page.params.id),
+      loadLinkedNotes(state.token, $page.params.id),
+      loadTranscript(state.token, $page.params.id),
+    ]);
     return () => unsubscribe();
   });
 
@@ -51,7 +66,8 @@
     error = '';
     try {
       video = await api.getVideo(activeToken, videoId);
-      title = video.title ?? fallbackTitle(video);
+      videoTitle = video.title ?? fallbackTitle(video);
+      noteTitle = videoTitle;
       resolveVideo(video);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load video.';
@@ -68,6 +84,18 @@
       error = err instanceof Error ? err.message : 'Unable to load linked notes.';
     } finally {
       loadingNotes = false;
+    }
+  }
+
+  async function loadTranscript(activeToken: string, videoId: string) {
+    loadingTranscript = true;
+    transcriptError = '';
+    try {
+      transcriptChunks = await api.listTranscriptChunks(activeToken, videoId);
+    } catch (err) {
+      transcriptError = err instanceof Error ? err.message : 'Unable to load transcript.';
+    } finally {
+      loadingTranscript = false;
     }
   }
 
@@ -104,6 +132,40 @@
     return 'External video';
   }
 
+  function handleTranscriptSeek(seconds: number) {
+    if (video?.source_type === 'local' && videoElement) {
+      videoElement.currentTime = seconds;
+      videoElement.play();
+      return;
+    }
+    if (youtubeId) {
+      const url = new URL(
+        video?.video_url ?? `https://www.youtube.com/watch?v=${youtubeId}`,
+      );
+      url.searchParams.set('t', `${Math.floor(seconds)}s`);
+      window.open(url.toString(), '_blank');
+    }
+  }
+
+  function handleVideoTimeUpdate(event: Event) {
+    const target = event.currentTarget as HTMLVideoElement | null;
+    if (!target) {
+      return;
+    }
+    updateActiveChunk(target.currentTime);
+  }
+
+  function updateActiveChunk(currentTime: number) {
+    if (transcriptChunks.length === 0) {
+      activeChunkId = null;
+      return;
+    }
+    const current = transcriptChunks.find(
+      (chunk) => currentTime >= chunk.start_seconds && currentTime <= chunk.end_seconds,
+    );
+    activeChunkId = current?.id ?? null;
+  }
+
   async function createNote() {
     if (!token || !video) {
       return;
@@ -112,11 +174,11 @@
     error = '';
     try {
       const payload = {
-        title: title.trim() || fallbackTitle(video),
+        title: noteTitle.trim() || fallbackTitle(video),
         body: '',
         tags: parseTags(tagsText),
         video_id: video.id,
-        video_title: title.trim() || undefined,
+        video_title: noteTitle.trim() || undefined,
       };
       createdNote = await api.createNote(token, payload);
       await loadLinkedNotes(token, video.id);
@@ -127,7 +189,64 @@
     }
   }
 
-  $: canCreate = title.trim().length > 0;
+  async function deleteVideo() {
+    if (!token || !video) {
+      return;
+    }
+    if (linkedNotes.length > 0) {
+      error = 'This video is attached to at least one note. Remove those links first.';
+      return;
+    }
+    const confirmed = window.confirm(
+      `Delete "${video.title ?? fallbackTitle(video)}"? This cannot be undone.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    deleting = true;
+    error = '';
+    try {
+      await api.deleteVideo(token, video.id);
+      goto('/library/videos');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        error = 'This video is attached to at least one note. Remove those links first.';
+      } else {
+        error = err instanceof Error ? err.message : 'Unable to delete video.';
+      }
+    } finally {
+      deleting = false;
+    }
+  }
+
+  async function saveVideoTitle() {
+    if (!token || !video) {
+      return;
+    }
+    savingVideoTitle = true;
+    error = '';
+    try {
+      const updated = await api.updateVideo(token, video.id, {
+        title: videoTitle.trim() || undefined,
+      });
+      video = updated;
+      videoTitle = updated.title ?? fallbackTitle(updated);
+      editingVideoTitle = false;
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to update video title.';
+    } finally {
+      savingVideoTitle = false;
+    }
+  }
+
+  function cancelVideoTitleEdit() {
+    if (video) {
+      videoTitle = video.title ?? fallbackTitle(video);
+    }
+    editingVideoTitle = false;
+  }
+
+  $: canCreate = noteTitle.trim().length > 0;
 </script>
 
 <svelte:head>
@@ -136,20 +255,69 @@
 
 <section class="space-y-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
-    <div>
-      <h1 class="text-2xl">{video ? video.title ?? fallbackTitle(video) : 'Video'}</h1>
+    <div class="space-y-2">
+      {#if editingVideoTitle}
+        <div class="flex flex-wrap items-center gap-2">
+          <input
+            class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:max-w-md"
+            type="text"
+            bind:value={videoTitle}
+            placeholder="Video title"
+          />
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+            on:click={saveVideoTitle}
+            disabled={savingVideoTitle}
+          >
+            {savingVideoTitle ? 'Saving...' : 'Save'}
+          </button>
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:border-slate-300 hover:bg-slate-50"
+            on:click={cancelVideoTitleEdit}
+            disabled={savingVideoTitle}
+          >
+            Cancel
+          </button>
+        </div>
+      {:else}
+        <div class="flex flex-wrap items-center gap-3">
+          <h1 class="text-2xl">{video ? video.title ?? fallbackTitle(video) : 'Video'}</h1>
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+            on:click={() => (editingVideoTitle = true)}
+          >
+            Rename
+          </button>
+        </div>
+      {/if}
       {#if video}
         <p class="text-sm text-slate-500">
           Uploaded {new Date(video.created_at).toLocaleString()}
         </p>
       {/if}
     </div>
-    <a
-      href="/library"
-      class="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-    >
-      Back to library
-    </a>
+    <div class="flex items-center gap-3">
+      <button
+        type="button"
+        class="rounded-full border border-red-200 px-4 py-2 text-sm text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+        on:click={deleteVideo}
+        disabled={deleting || linkedNotes.length > 0}
+        title={linkedNotes.length > 0
+          ? 'Remove the linked notes before deleting this video.'
+          : 'Delete this video'}
+      >
+        {deleting ? 'Deleting...' : 'Delete video'}
+      </button>
+      <a
+        href="/library"
+        class="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+      >
+        Back to library
+      </a>
+    </div>
   </div>
 
   {#if error}
@@ -175,7 +343,13 @@
               allowfullscreen
             ></iframe>
           {:else if resolvedVideoUrl}
-            <video class="aspect-video w-full" src={resolvedVideoUrl} controls></video>
+            <video
+              class="aspect-video w-full"
+              src={resolvedVideoUrl}
+              controls
+              bind:this={videoElement}
+              on:timeupdate={handleVideoTimeUpdate}
+            ></video>
           {:else}
             <div class="flex h-64 items-center justify-center text-sm text-slate-400">
               No preview available.
@@ -189,20 +363,40 @@
             </a>
           </div>
         {/if}
+        {#if transcriptError}
+          <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+            {transcriptError}
+          </div>
+        {:else if loadingTranscript}
+          <div class="mt-6 text-xs text-slate-500">Loading transcript...</div>
+        {:else}
+          <div class="mt-6">
+            <TranscriptScroller
+              title="Transcript"
+              helperText={video.source_type === 'local'
+                ? 'Play the video to follow along. Click a line to jump.'
+                : 'Click a line to open YouTube at that timestamp.'}
+              chunks={transcriptChunks}
+              activeId={activeChunkId}
+              onSeek={handleTranscriptSeek}
+              compact={true}
+            />
+          </div>
+        {/if}
       </div>
 
       <div class="space-y-4">
         <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
-          <h2 class="text-lg font-semibold text-slate-900">Create a lesson note</h2>
+          <h2 class="text-lg font-semibold text-slate-900">Create a note</h2>
           <p class="mt-1 text-xs text-slate-500">Attach this video to a new note.</p>
           <form class="mt-4 space-y-3" on:submit|preventDefault={createNote}>
             <label class="block text-xs text-slate-600">
-              Lesson title
+              Note title
               <input
                 class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
                 type="text"
-                bind:value={title}
-                placeholder="Lesson title"
+                bind:value={noteTitle}
+                placeholder="Note title"
               />
             </label>
             <label class="block text-xs text-slate-600">

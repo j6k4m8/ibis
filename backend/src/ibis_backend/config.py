@@ -15,7 +15,9 @@ class Settings(BaseSettings):
         allow_origins: Allowed CORS origins.
     """
 
-    model_config = SettingsConfigDict(env_prefix="IBIS_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="IBIS_", env_file=".env", extra="ignore"
+    )
 
     database_url: str = "sqlite:///./ibis.db"
     environment: str = "dev"
@@ -24,9 +26,17 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24
     public_base_url: str = "http://localhost:8000"
     upload_dir: str = "./uploads"
-    upload_max_bytes: int = 100 * 1024 * 1024
-    storage_limit_bytes: int = 5 * 1024 * 1024 * 1024
+    upload_max_bytes: int = 1000 * 1024 * 1024  # 1GB
+    storage_limit_bytes: int = 10 * 1024 * 1024 * 1024  # 10GB
     fetch_video_titles: bool = True
+    processing_enabled: bool = False
+    transcode_enabled: bool = True
+    transcription_enabled: bool = True
+    ffmpeg_path: str = "ffmpeg"
+    whisper_path: str = "whisper"
+    whisper_model: str = "base"
+    whisper_language: str = "en"
+    worker_poll_interval_seconds: int = 5
 
 
 @lru_cache

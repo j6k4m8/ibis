@@ -184,7 +184,7 @@
       class="rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-400"
       on:click={openModal}
     >
-      New lesson
+      New note
     </button>
   </div>
 
@@ -237,7 +237,7 @@
       </div>
     {:else if sortedNotes.length === 0}
       <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-        No notes yet. Create your first lesson note to get started.
+        No notes yet. Create your first note to get started.
       </div>
     {:else}
       {#each sortedNotes as note}
@@ -286,7 +286,7 @@
     <div class="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl">Create a new lesson</h2>
+          <h2 class="text-xl">Create a new note</h2>
           <p class="mt-1 text-sm text-slate-500">Add a title, optional video, and tags.</p>
         </div>
         <button
@@ -305,7 +305,7 @@
             class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
             type="text"
             bind:value={title}
-            placeholder="Lesson title"
+            placeholder="Note title"
             required
           />
         </label>

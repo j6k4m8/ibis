@@ -1,6 +1,6 @@
 # Ibis
 
-(Music)-lesson management and annotation app, with support for realtime collaboration with your teacher.
+Music note management and annotation app, with support for realtime collaboration with your teacher.
 
 ## Features
 
@@ -37,6 +37,12 @@ Help welcome :) Please reach out or file an Issue to "claim" a task before contr
 - [ ] k8s packaging
 - [ ] (free) public deployment
 
+## Workflow
+
+- Update `TODO.md` as features land.
+- Add major features to `## Features` here.
+- Add tests/docs when they make sense.
+- Commit at meaningful checkpoints with clear messages.
 
 ## Dev servers
 
@@ -47,6 +53,18 @@ All-in-one:
 ```
 
 The script loads a root `.env` file if present and exports variables for both services.
+
+Background worker (media processing):
+
+```bash
+./scripts/worker.sh
+```
+
+Enable processing with:
+
+```bash
+IBIS_PROCESSING_ENABLED=true IBIS_TRANSCODE_ENABLED=true IBIS_TRANSCRIPTION_ENABLED=true
+```
 
 Backend:
 
@@ -80,4 +98,3 @@ Frontend:
 cd frontend
 npm run test
 ```
-

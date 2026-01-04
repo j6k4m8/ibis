@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@j6k4m8/catl-render": "^0.1.0",
     "@milkdown/core": "^7.1.1",
     "@milkdown/plugin-listener": "^7.1.1",
     "@milkdown/prose": "^7.1.1",

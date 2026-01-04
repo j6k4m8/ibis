@@ -1,3 +1,5 @@
+import { renderCATL } from '@j6k4m8/catl-render';
+
 const TIMESTAMP_REGEX = /==([^=]+)==/g;
 const SEGMENT_REGEX = /\|:\s*([^|]+?)\s*-\s*([^|]+?)\s*:\|/g;
 const BOLD_REGEX = /\*\*([^*]+)\*\*/g;
@@ -6,6 +8,8 @@ const CODE_REGEX = /`([^`]+)`/g;
 const HEADING_REGEX = /^(#{1,3})\s+(.*)$/;
 const LIST_REGEX = /^[-*+]\s+(.*)$/;
 const TASK_REGEX = /^\[( |x|X)\]\s+(.*)$/;
+const CATL_FENCE_REGEX = /^```catl\s*$/i;
+const FENCE_END_REGEX = /^```\s*$/;
 
 function escapeHtml(text: string): string {
   return text
@@ -34,12 +38,45 @@ function renderInline(text: string): string {
 }
 
 export function renderMarkdownPreview(input: string, maxLines = 3): string {
-  const lines = input.split('\n').slice(0, maxLines);
+  const lines = input.split('\n');
   let html = '';
   let inList = false;
+  let lineCount = 0;
 
-  for (const rawLine of lines) {
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lineCount >= maxLines) {
+      break;
+    }
+    const rawLine = lines[i];
     const line = rawLine.trim();
+    lineCount += 1;
+
+    if (CATL_FENCE_REGEX.test(line)) {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      const blockLines: string[] = [];
+      for (let j = i + 1; j < lines.length; j += 1) {
+        const blockLine = lines[j];
+        if (FENCE_END_REGEX.test(blockLine.trim())) {
+          i = j;
+          lineCount += 1;
+          break;
+        }
+        blockLines.push(blockLine);
+        lineCount += 1;
+      }
+      const source = blockLines.join('\n');
+      let catlHtml = '';
+      try {
+        catlHtml = renderCATL(source);
+      } catch {
+        catlHtml = `<pre><code>${escapeHtml(source)}</code></pre>`;
+      }
+      html += `<div class="ibis-catl-block">${catlHtml}</div>`;
+      continue;
+    }
     if (!line) {
       if (inList) {
         html += '</ul>';

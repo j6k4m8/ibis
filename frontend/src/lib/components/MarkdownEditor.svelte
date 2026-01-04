@@ -3,6 +3,7 @@
 
   import type { Editor } from '@milkdown/core';
 
+  import { catl } from '$lib/milkdown/catl';
   import { segment } from '$lib/milkdown/segment';
   import { taskToggle } from '$lib/milkdown/taskToggle';
   import { timestamp } from '$lib/milkdown/timestamp';
@@ -45,7 +46,8 @@
         .use(listener)
         .use(timestamp)
         .use(segment)
-        .use(taskToggle);
+        .use(taskToggle)
+        .use(catl);
 
       try {
         await editor.create();

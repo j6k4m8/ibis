@@ -7,13 +7,13 @@ import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth';
   import type { Video } from '$lib/types';
 
-  // TODO: get from server config
-  const MAX_UPLOAD_BYTES = 1000 * 1024 * 1024;
+  const DEFAULT_MAX_UPLOAD_BYTES = 1000 * 1024 * 1024;
 
   let token: string | null = null;
   let videos: Video[] = [];
   let loading = true;
   let error = '';
+  let maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES;
   let filter: 'all' | 'youtube' | 'uploads' | 'external' = 'all';
   let sort: 'recent' | 'title' | 'size' = 'recent';
   let search = '';
@@ -46,6 +46,12 @@ import { goto } from '$app/navigation';
       unsubscribe();
       goto('/login');
       return;
+    }
+    try {
+      const config = await api.getAppConfig();
+      maxUploadBytes = config.upload_max_bytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+    } catch {
+      maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES;
     }
     await loadVideos(state.token);
     return () => unsubscribe();
@@ -202,15 +208,16 @@ import { goto } from '$app/navigation';
       if (!file.type.startsWith('video/')) {
         continue;
       }
-      if (file.size > MAX_UPLOAD_BYTES) {
-        uploadError = 'One or more files exceed the 100MB limit.';
+      if (file.size > maxUploadBytes) {
+        const limitLabel = formatBytes(maxUploadBytes);
+        uploadError = `One or more files exceed the ${limitLabel} limit.`;
         incoming.push({
           id: `${file.name}-${Date.now()}`,
           file,
           title: defaultTitle(file),
           status: 'error',
           progress: 0,
-          error: 'File exceeds the 100MB limit.',
+          error: `File exceeds the ${limitLabel} limit.`,
         });
         continue;
       }

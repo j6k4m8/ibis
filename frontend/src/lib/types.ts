@@ -74,6 +74,11 @@ export type Me = {
   storage_limit_bytes: number;
 };
 
+export type AppConfig = {
+  upload_max_bytes: number;
+  storage_limit_bytes: number;
+};
+
 export type Job = {
   id: string;
   video_id: string;

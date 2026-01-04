@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ibis_backend.api.auth import router as auth_router
+from ibis_backend.api.config import router as config_router
 from ibis_backend.api.health import router as health_router
 from ibis_backend.api.jobs import router as jobs_router
 from ibis_backend.api.lessons import router as lessons_router
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(auth_router, prefix="/auth", tags=["auth"])
+    app.include_router(config_router, tags=["config"])
     app.include_router(jobs_router, prefix="/jobs", tags=["jobs"])
     app.include_router(me_router, prefix="/me", tags=["me"])
     app.include_router(lessons_router, prefix="/lessons", tags=["lessons"])

@@ -109,6 +109,13 @@ class MeUpdate(BaseModel):
     lesson_autogroup_hours: Optional[int] = Field(None, ge=0, le=72)
 
 
+class AppConfigRead(BaseModel):
+    """Public runtime configuration for clients."""
+
+    upload_max_bytes: int
+    storage_limit_bytes: int
+
+
 class RegisterRequest(BaseModel):
     """Payload to register a new user."""
 

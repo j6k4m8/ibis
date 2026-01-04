@@ -74,6 +74,13 @@ is deleted unless you set:
 IBIS_KEEP_RAW_UPLOADS=true
 ```
 
+Upload/storage limits (bytes):
+
+```bash
+IBIS_UPLOAD_MAX_BYTES=104857600
+IBIS_STORAGE_LIMIT_BYTES=5368709120
+```
+
 Backend:
 
 ```bash

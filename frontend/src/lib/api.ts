@@ -1,5 +1,6 @@
 import type {
   AuthResponse,
+  AppConfig,
   Job,
   Lesson,
   Me,
@@ -106,6 +107,10 @@ export async function updateMe(
     },
     token,
   );
+}
+
+export async function getAppConfig(): Promise<AppConfig> {
+  return request<AppConfig>('/config');
 }
 
 export async function listNotes(

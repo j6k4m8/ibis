@@ -162,7 +162,7 @@
     <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-slate-900">Video library</h2>
-        <a class="text-xs text-orange-600 hover:underline" href="/library">Open library →</a>
+        <a class="text-xs text-orange-600 hover:underline" href="/library/lessons">Open library →</a>
       </div>
       <p class="mt-3 text-xs text-slate-500">
         Browse, sort, and rename uploads in the dedicated library view.

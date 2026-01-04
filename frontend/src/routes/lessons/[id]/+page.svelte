@@ -421,10 +421,10 @@
         <div class="space-y-6">
           {#each timelineItems as item}
             {#if item.type === 'note'}
-              <NoteDetailView noteId={item.note.id} showHead={false} />
+              <NoteDetailView noteId={item.note.id} showHead={false} showLessonControls={false} />
             {:else}
               <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
-                <div class="grid gap-6 lg:grid-cols-[1fr_1fr]">
+                <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
                   <div>
                     <div class="text-xs text-slate-500">
                       {formatVideoCreatedAt(item.video)}
@@ -560,23 +560,6 @@
                       >
                         Open video
                       </a>
-                    </div>
-                    <div class="mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                      {#if getYouTubeId(item.video.video_url)}
-                        <iframe
-                          class="aspect-video w-full"
-                          src={`https://www.youtube.com/embed/${getYouTubeId(item.video.video_url)}`}
-                          title={item.video.title ?? 'YouTube video'}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowfullscreen
-                        ></iframe>
-                      {:else if resolveVideoUrl(item.video)}
-                        <video class="aspect-video w-full" src={resolveVideoUrl(item.video)} controls></video>
-                      {:else}
-                        <div class="flex h-32 items-center justify-center text-xs text-slate-400">
-                          Video unavailable
-                        </div>
-                      {/if}
                     </div>
                     <input
                       class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100"

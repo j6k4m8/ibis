@@ -13,6 +13,7 @@
 
   export let noteId: string;
   export let showHead = true;
+  export let showLessonControls = true;
 
   let note: Note | null = null;
   let versions: NoteVersion[] = [];
@@ -76,11 +77,11 @@
       return () => unsubscribe();
     }
 
-    await Promise.all([
-      loadNote(state.token, noteId),
-      loadVersions(state.token, noteId),
-      loadLessonData(state.token, noteId),
-    ]);
+    const tasks: Promise<void>[] = [loadNote(state.token, noteId), loadVersions(state.token, noteId)];
+    if (showLessonControls) {
+      tasks.push(loadLessonData(state.token, noteId));
+    }
+    await Promise.all(tasks);
 
     return () => unsubscribe();
   });
@@ -542,7 +543,7 @@
     error = '';
     try {
       await api.deleteNote(token, note.id);
-      goto('/library');
+      goto('/library/lessons');
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to delete note.';
     } finally {
@@ -889,64 +890,66 @@
             {/if}
           </div>
         </div>
-        <div class="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-4">
-          <div class="flex items-center justify-between">
-            <div class="text-xs font-semibold uppercase tracking-widest text-slate-500">Lessons</div>
-            <a href="/lessons" class="text-[11px] text-slate-400 hover:text-orange-600 hover:underline">
-              Manage
-            </a>
-          </div>
-          {#if lessonsError}
-            <div class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-              {lessonsError}
+        {#if showLessonControls}
+          <div class="mt-4 rounded-2xl border border-slate-100 bg-white px-4 py-4">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-semibold uppercase tracking-widest text-slate-500">Lessons</div>
+              <a href="/lessons" class="text-[11px] text-slate-400 hover:text-orange-600 hover:underline">
+                Manage
+              </a>
             </div>
-          {:else if lessonsLoading}
-            <div class="mt-3 text-xs text-slate-500">Loading lessons...</div>
-          {:else}
-            <div class="mt-3 space-y-3">
-              {#if noteLessons.length === 0}
-                <div class="text-xs text-slate-400">No lessons linked yet.</div>
-              {:else}
-                <div class="flex flex-wrap gap-2">
-                  {#each noteLessons as lesson}
-                    <div class="flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-600">
-                      <a href={`/lessons/${lesson.id}`} class="hover:text-orange-600 hover:underline">
-                        {formatLessonTitle(lesson)}
-                      </a>
-                      <button
-                        type="button"
-                        class="text-slate-400 transition hover:text-orange-600"
-                        on:click={() => removeLessonFromNote(lesson.id)}
-                        disabled={removingLessonId === lesson.id}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-              <div class="flex flex-wrap items-center gap-2">
-                <select
-                  class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm"
-                  bind:value={selectedLessonId}
-                >
-                  <option value="">Add to a lesson…</option>
-                  {#each availableLessons as lesson}
-                    <option value={lesson.id}>{formatLessonTitle(lesson)}</option>
-                  {/each}
-                </select>
-                <button
-                  type="button"
-                  class="rounded-full border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
-                  on:click={addLessonToNote}
-                  disabled={!selectedLessonId || addingLesson}
-                >
-                  {addingLesson ? 'Adding...' : 'Add'}
-                </button>
+            {#if lessonsError}
+              <div class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                {lessonsError}
               </div>
-            </div>
-          {/if}
-        </div>
+            {:else if lessonsLoading}
+              <div class="mt-3 text-xs text-slate-500">Loading lessons...</div>
+            {:else}
+              <div class="mt-3 space-y-3">
+                {#if noteLessons.length === 0}
+                  <div class="text-xs text-slate-400">No lessons linked yet.</div>
+                {:else}
+                  <div class="flex flex-wrap gap-2">
+                    {#each noteLessons as lesson}
+                      <div class="flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-600">
+                        <a href={`/lessons/${lesson.id}`} class="hover:text-orange-600 hover:underline">
+                          {formatLessonTitle(lesson)}
+                        </a>
+                        <button
+                          type="button"
+                          class="text-slate-400 transition hover:text-orange-600"
+                          on:click={() => removeLessonFromNote(lesson.id)}
+                          disabled={removingLessonId === lesson.id}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
+                <div class="flex flex-wrap items-center gap-2">
+                  <select
+                    class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm"
+                    bind:value={selectedLessonId}
+                  >
+                    <option value="">Add to a lesson…</option>
+                    {#each availableLessons as lesson}
+                      <option value={lesson.id}>{formatLessonTitle(lesson)}</option>
+                    {/each}
+                  </select>
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+                    on:click={addLessonToNote}
+                    disabled={!selectedLessonId || addingLesson}
+                  >
+                    {addingLesson ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+              </div>
+            {/if}
+          </div>
+        {/if}
       </div>
     </div>
 

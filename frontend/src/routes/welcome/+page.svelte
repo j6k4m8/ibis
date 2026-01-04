@@ -3,12 +3,15 @@
   import { goto } from '$app/navigation';
 
   import { authStore } from '$lib/stores/auth';
+  import { markWelcomeSeen } from '$lib/utils/welcome';
 
   onMount(async () => {
     const state = await authStore.init();
     if (!state.token) {
       goto('/login');
+      return;
     }
+    markWelcomeSeen(state.user?.id);
   });
 </script>
 

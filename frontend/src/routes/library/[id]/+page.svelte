@@ -334,7 +334,7 @@
       {/if}
     </div>
     <a
-      href="/library"
+      href="/library/videos"
       class="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
     >
       Back to library

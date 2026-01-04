@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-  <title>Lessons · Ibis</title>
+  <title>Library · Lessons</title>
 </svelte:head>
 
-<LessonsList />
+<LessonsList title="Lessons" subtitle="Browse your lesson timelines." />

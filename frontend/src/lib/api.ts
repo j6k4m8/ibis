@@ -154,6 +154,16 @@ export async function updateNote(
   );
 }
 
+export async function deleteNote(token: string, noteId: string): Promise<void> {
+  await request<void>(
+    `/notes/${noteId}`,
+    {
+      method: 'DELETE',
+    },
+    token,
+  );
+}
+
 export async function listNoteVersions(token: string, noteId: string): Promise<NoteVersion[]> {
   return request<NoteVersion[]>(`/notes/${noteId}/versions`, {}, token);
 }

@@ -16,7 +16,7 @@
   let error = '';
   let searchQuery = '';
   let selectedTag = 'all';
-  let sortOption: 'updated' | 'created' | 'title' = 'updated';
+  let sortOption: 'updated' | 'created' | 'title' = 'created';
 
   let title = '';
   let videoUrl = '';

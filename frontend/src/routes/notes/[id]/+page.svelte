@@ -47,6 +47,8 @@
   let activeTranscriptId: string | null = null;
   let createdAtInput = '';
   let updatingCreatedAt = false;
+  let deletingNote = false;
+  let showDeleteModal = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -451,6 +453,23 @@
     if (videoElement) {
       videoElement.currentTime = seconds;
       videoElement.play();
+    }
+  }
+
+  async function confirmDelete() {
+    if (!token || !note) {
+      return;
+    }
+    deletingNote = true;
+    error = '';
+    try {
+      await api.deleteNote(token, note.id);
+      goto('/library');
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to delete note.';
+    } finally {
+      deletingNote = false;
+      showDeleteModal = false;
     }
   }
 
@@ -896,6 +915,52 @@
           {/if}
         </div>
       {/if}
+      <div class="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 shadow-xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-semibold">Delete note</div>
+            <div class="mt-1 text-xs text-red-600">
+              This permanently removes the note and its history.
+            </div>
+          </div>
+          <button
+            type="button"
+            class="rounded-full border border-red-200 px-4 py-2 text-xs text-red-700 transition hover:border-red-300 hover:bg-red-100"
+            on:click={() => (showDeleteModal = true)}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
   </section>
+{/if}
+
+{#if showDeleteModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-10">
+    <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <h3 class="text-lg font-semibold text-slate-900">Delete this note?</h3>
+      <p class="mt-2 text-sm text-slate-500">
+        This will permanently remove the note and its history. This action cannot be undone.
+      </p>
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="rounded-full border border-slate-200 px-4 py-2 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+          on:click={() => (showDeleteModal = false)}
+          disabled={deletingNote}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-500 disabled:opacity-60"
+          on:click={confirmDelete}
+          disabled={deletingNote}
+        >
+          {deletingNote ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  </div>
 {/if}

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import re
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from ibis_backend.dependencies import get_current_user
 from ibis_backend.config import get_settings
 from ibis_backend.db import get_db
-from ibis_backend.models import Note, NoteVersion, ProcessingJob, User, Video, utcnow
+from ibis_backend.models import Note, NoteVersion, ProcessingJob, Task, User, Video, utcnow
 from ibis_backend.note_versions import upsert_note_version
 from ibis_backend.task_sync import sync_tasks_for_note
 from ibis_backend.schemas import NoteCreate, NoteRead, NoteUpdate, NoteVersionRead
@@ -345,3 +345,28 @@ def get_note_version(
         tags=version.tags or [],
         created_at=version.created_at,
     )
+
+
+@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_note(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Delete a note and related data."""
+
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .filter(Note.user_id == current_user.id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    db.query(NoteVersion).filter(NoteVersion.note_id == note.id).delete()
+    db.query(Task).filter(Task.note_id == note.id).delete()
+    db.delete(note)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

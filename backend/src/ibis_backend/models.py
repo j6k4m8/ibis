@@ -42,10 +42,12 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[Optional[str]] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    lesson_autogroup_hours: Mapped[int] = mapped_column(Integer, default=4)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     notes: Mapped[list["Note"]] = relationship(back_populates="user")
     videos: Mapped[list["Video"]] = relationship(back_populates="user")
+    lessons: Mapped[list["Lesson"]] = relationship(back_populates="user")
 
 
 class Classroom(Base):
@@ -94,6 +96,7 @@ class Video(Base):
     notes: Mapped[list["Note"]] = relationship(back_populates="video")
     jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="video")
     user: Mapped[User] = relationship(back_populates="videos")
+    lessons: Mapped[list["LessonVideo"]] = relationship(back_populates="video")
 
 
 class Note(Base):
@@ -117,6 +120,51 @@ class Note(Base):
     tasks: Mapped[list["Task"]] = relationship(back_populates="note")
     versions: Mapped[list["NoteVersion"]] = relationship(back_populates="note")
     user: Mapped[User] = relationship(back_populates="notes")
+    lessons: Mapped[list["LessonNote"]] = relationship(back_populates="note")
+
+
+class Lesson(Base):
+    """Lesson grouping for notes and videos."""
+
+    __tablename__ = "lessons"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    title: Mapped[Optional[str]] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="lessons")
+    lesson_notes: Mapped[list["LessonNote"]] = relationship(back_populates="lesson")
+    lesson_videos: Mapped[list["LessonVideo"]] = relationship(back_populates="lesson")
+
+
+class LessonNote(Base):
+    """Join table for lessons and notes."""
+
+    __tablename__ = "lesson_notes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id"), nullable=False)
+    note_id: Mapped[str] = mapped_column(ForeignKey("notes.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    lesson: Mapped["Lesson"] = relationship(back_populates="lesson_notes")
+    note: Mapped[Note] = relationship(back_populates="lessons")
+
+
+class LessonVideo(Base):
+    """Join table for lessons and videos."""
+
+    __tablename__ = "lesson_videos"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id"), nullable=False)
+    video_id: Mapped[str] = mapped_column(ForeignKey("videos.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    lesson: Mapped["Lesson"] = relationship(back_populates="lesson_videos")
+    video: Mapped[Video] = relationship(back_populates="lessons")
 
 
 class NoteVersion(Base):

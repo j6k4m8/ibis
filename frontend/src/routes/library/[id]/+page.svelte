@@ -71,7 +71,7 @@
       videoTitle = video.title ?? fallbackTitle(video);
       noteTitle = videoTitle;
       resolveVideo(video);
-      createdAtInput = toDatetimeLocal(video.created_at);
+      createdAtInput = toDatetimeLocal(video.original_created_at ?? video.created_at);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load video.';
     } finally {
@@ -133,6 +133,14 @@
       return 'YouTube video';
     }
     return 'External video';
+  }
+
+  function formatVideoCreatedAt(videoData: Video) {
+    const timestamp = videoData.original_created_at ?? videoData.created_at;
+    return new Date(timestamp).toLocaleString(undefined, {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    });
   }
 
   function handleTranscriptSeek(seconds: number) {
@@ -305,7 +313,7 @@
       </div>
       {#if video}
         <p class="text-sm text-slate-500">
-          Uploaded {new Date(video.created_at).toLocaleString()}
+          Uploaded {formatVideoCreatedAt(video)}
         </p>
         <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <label class="text-[11px] uppercase tracking-widest text-slate-400">Created</label>

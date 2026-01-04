@@ -1,6 +1,7 @@
 import type {
   AuthResponse,
   Job,
+  Lesson,
   Me,
   Note,
   NoteVersion,
@@ -91,6 +92,20 @@ export async function me(token: string): Promise<User> {
 
 export async function getMe(token: string): Promise<Me> {
   return request<Me>('/me', {}, token);
+}
+
+export async function updateMe(
+  token: string,
+  payload: { lesson_autogroup_hours?: number },
+): Promise<Me> {
+  return request<Me>(
+    '/me',
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
 }
 
 export async function listNotes(
@@ -315,6 +330,117 @@ export async function updateTask(
 
 export async function listJobs(token: string): Promise<Job[]> {
   return request<Job[]>('/jobs', {}, token);
+}
+
+export async function listLessons(token: string): Promise<Lesson[]> {
+  return request<Lesson[]>('/lessons', {}, token);
+}
+
+export async function getLesson(token: string, lessonId: string): Promise<Lesson> {
+  return request<Lesson>(`/lessons/${lessonId}`, {}, token);
+}
+
+export async function createLesson(
+  token: string,
+  payload: { title?: string; created_at?: string },
+): Promise<Lesson> {
+  return request<Lesson>(
+    '/lessons',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function updateLesson(
+  token: string,
+  lessonId: string,
+  payload: { title?: string },
+): Promise<Lesson> {
+  return request<Lesson>(
+    `/lessons/${lessonId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function listLessonNotes(token: string, lessonId: string): Promise<Note[]> {
+  return request<Note[]>(`/lessons/${lessonId}/notes`, {}, token);
+}
+
+export async function listLessonVideos(token: string, lessonId: string): Promise<Video[]> {
+  return request<Video[]>(`/lessons/${lessonId}/videos`, {}, token);
+}
+
+export async function listLessonTasks(token: string, lessonId: string): Promise<Task[]> {
+  return request<Task[]>(`/lessons/${lessonId}/tasks`, {}, token);
+}
+
+export async function addLessonNote(
+  token: string,
+  lessonId: string,
+  noteId: string,
+): Promise<Lesson> {
+  return request<Lesson>(
+    `/lessons/${lessonId}/notes`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ note_id: noteId }),
+    },
+    token,
+  );
+}
+
+export async function removeLessonNote(
+  token: string,
+  lessonId: string,
+  noteId: string,
+): Promise<void> {
+  await request<void>(
+    `/lessons/${lessonId}/notes/${noteId}`,
+    {
+      method: 'DELETE',
+    },
+    token,
+  );
+}
+
+export async function addLessonVideo(
+  token: string,
+  lessonId: string,
+  videoId: string,
+): Promise<Lesson> {
+  return request<Lesson>(
+    `/lessons/${lessonId}/videos`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ video_id: videoId }),
+    },
+    token,
+  );
+}
+
+export async function removeLessonVideo(
+  token: string,
+  lessonId: string,
+  videoId: string,
+): Promise<void> {
+  await request<void>(
+    `/lessons/${lessonId}/videos/${videoId}`,
+    {
+      method: 'DELETE',
+    },
+    token,
+  );
+}
+
+export async function listNoteLessons(token: string, noteId: string): Promise<Lesson[]> {
+  return request<Lesson[]>(`/lessons/notes/${noteId}`, {}, token);
 }
 
 export async function listTranscriptChunks(

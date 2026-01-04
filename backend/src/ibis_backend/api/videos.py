@@ -15,6 +15,7 @@ from ibis_backend.db import get_db
 from ibis_backend.dependencies import get_current_user
 from ibis_backend.models import Note, ProcessingJob, TranscriptChunk, User, Video, utcnow
 from ibis_backend.schemas import TranscriptChunkRead, VideoRead, VideoUpdate
+from ibis_backend.services.lessons import auto_group_video
 
 router = APIRouter()
 
@@ -213,6 +214,8 @@ async def upload_video(
     db.add(video)
     db.commit()
     db.refresh(video)
+
+    auto_group_video(video, current_user, db)
 
     settings = get_settings()
     if settings.processing_enabled:

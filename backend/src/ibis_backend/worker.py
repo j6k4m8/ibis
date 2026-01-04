@@ -101,6 +101,14 @@ def process_transcode(video: Video) -> tuple[bool, str | None]:
 
     if output_path.exists():
         output_size = output_path.stat().st_size
+        raw_path = source
+        video.storage_key = f"transcoded/{video.user_id}/{video.id}.mp4"
+        video.file_size_bytes = output_size
+        video.mime_type = "video/mp4"
+        video.updated_at = utcnow()
+        db.commit()
+        if not settings.keep_raw_uploads and raw_path.exists():
+            raw_path.unlink(missing_ok=True)
         if source_size and output_size:
             saved = source_size - output_size
             detail = f"{format_bytes(source_size)} → {format_bytes(output_size)}"

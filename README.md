@@ -67,6 +67,13 @@ Enable processing with:
 IBIS_PROCESSING_ENABLED=true IBIS_TRANSCODE_ENABLED=true IBIS_TRANSCRIPTION_ENABLED=true
 ```
 
+Raw uploads are stored under `uploads/raw/{user_id}`. After a successful transcode, the raw file
+is deleted unless you set:
+
+```bash
+IBIS_KEEP_RAW_UPLOADS=true
+```
+
 Backend:
 
 ```bash

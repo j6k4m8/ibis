@@ -13,7 +13,7 @@
   onMount(async () => {
     const state = await authStore.init();
     if (state.token) {
-      goto('/notes');
+      goto('/welcome');
     }
   });
 
@@ -22,7 +22,7 @@
     loading = true;
     try {
       await authStore.register(email, password, displayName || undefined);
-      goto('/notes');
+      goto('/welcome');
     } catch (err) {
       error = err instanceof Error ? err.message : 'Registration failed.';
     } finally {

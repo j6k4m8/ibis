@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
@@ -26,14 +26,24 @@ from ibis_backend.schemas import (
 router = APIRouter()
 
 
+def ensure_utc(value: datetime | None) -> datetime | None:
+    """Ensure datetimes carry a UTC timezone."""
+
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def lesson_to_read(lesson: Lesson) -> LessonRead:
     """Convert lesson ORM to schema."""
 
     return LessonRead(
         id=lesson.id,
         title=lesson.title,
-        created_at=lesson.created_at,
-        updated_at=lesson.updated_at,
+        created_at=ensure_utc(lesson.created_at),
+        updated_at=ensure_utc(lesson.updated_at),
     )
 
 
@@ -402,4 +412,3 @@ def list_note_lessons(
         .all()
     )
     return [lesson_to_read(lesson) for lesson in lessons]
-

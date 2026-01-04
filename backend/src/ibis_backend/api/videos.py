@@ -20,6 +20,16 @@ from ibis_backend.services.lessons import auto_group_video
 router = APIRouter()
 
 
+def ensure_utc(value: datetime | None) -> datetime | None:
+    """Ensure datetimes carry a UTC timezone."""
+
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def video_to_read(video: Video) -> VideoRead:
     """Convert a Video ORM model to a response schema.
 
@@ -52,10 +62,10 @@ def video_to_read(video: Video) -> VideoRead:
         file_size_bytes=video.file_size_bytes,
         original_filename=video.original_filename,
         mime_type=video.mime_type,
-        original_created_at=video.original_created_at,
+        original_created_at=ensure_utc(video.original_created_at),
         duration_seconds=video.duration_seconds,
-        created_at=video.created_at,
-        updated_at=video.updated_at,
+        created_at=ensure_utc(video.created_at),
+        updated_at=ensure_utc(video.updated_at),
     )
 
 
@@ -149,12 +159,12 @@ async def upload_video(
     settings = get_settings()
     max_bytes = settings.upload_max_bytes
     upload_root = Path(settings.upload_dir).expanduser()
-    user_dir = upload_root / current_user.id
+    user_dir = upload_root / "raw" / current_user.id
     user_dir.mkdir(parents=True, exist_ok=True)
 
     suffix = Path(file.filename).suffix
     storage_name = f"{uuid4().hex}{suffix}"
-    storage_key = f"{current_user.id}/{storage_name}"
+    storage_key = f"raw/{current_user.id}/{storage_name}"
     destination = upload_root / storage_key
 
     bytes_written = 0
@@ -220,11 +230,12 @@ async def upload_video(
     settings = get_settings()
     if settings.processing_enabled:
         job_types: list[str] = []
+        job_types.append("creation_time")
         if settings.transcode_enabled:
             job_types.append("transcode")
         if settings.transcription_enabled:
             job_types.append("transcribe")
-        job_types.extend(["thumbnail", "duration", "creation_time"])
+        job_types.extend(["thumbnail", "duration"])
         if job_types:
             now = utcnow()
             for job_type in job_types:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -42,6 +43,7 @@ def video_to_read(video: Video) -> VideoRead:
         file_size_bytes=video.file_size_bytes,
         original_filename=video.original_filename,
         mime_type=video.mime_type,
+        original_created_at=video.original_created_at,
         created_at=video.created_at,
         updated_at=video.updated_at,
     )
@@ -103,6 +105,7 @@ def get_video(
 async def upload_video(
     file: UploadFile = File(...),
     title: str | None = Form(None),
+    last_modified_ms: int | None = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> VideoRead:
@@ -159,8 +162,16 @@ async def upload_video(
         destination.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
+    original_created_at = None
+    if last_modified_ms is not None and last_modified_ms > 0:
+        original_created_at = datetime.fromtimestamp(
+            last_modified_ms / 1000, tz=timezone.utc
+        )
+
     if title and title.strip():
         display_title = title.strip()
+    elif original_created_at:
+        display_title = original_created_at.strftime("%Y-%m-%d %H:%M")
     else:
         display_title = utcnow().strftime("%Y-%m-%d %H:%M")
     video = Video(
@@ -172,6 +183,7 @@ async def upload_video(
         file_size_bytes=bytes_written,
         original_filename=file.filename,
         mime_type=file.content_type or "application/octet-stream",
+        original_created_at=original_created_at,
         created_at=utcnow(),
         updated_at=utcnow(),
         user=current_user,

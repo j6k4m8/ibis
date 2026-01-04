@@ -1,5 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
+from datetime import datetime, timezone
 
 from ibis_backend.app import create_app
 from ibis_backend.config import get_settings
@@ -213,3 +214,23 @@ def test_list_transcript_chunks(
     chunks = transcript_response.json()
     assert len(chunks) == 2
     assert chunks[0]["text"] == "First chunk"
+
+
+def test_upload_uses_last_modified_for_title(
+    upload_client: TestClient, upload_auth_headers: dict[str, str]
+) -> None:
+    timestamp_ms = 1_700_000_000_000
+    expected = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).strftime(
+        "%Y-%m-%d %H:%M"
+    )
+    payload = b"video-bytes"
+    response = upload_client.post(
+        "/videos/upload",
+        data={"last_modified_ms": str(timestamp_ms)},
+        files={"file": ("upload.mp4", payload, "video/mp4")},
+        headers=upload_auth_headers,
+    )
+    assert response.status_code == 201
+    video = response.json()
+    assert video["title"] == expected
+    assert video["original_created_at"].startswith(expected[:10])

@@ -28,6 +28,7 @@ class VideoRead(BaseModel):
     file_size_bytes: Optional[int] = None
     original_filename: Optional[str] = None
     mime_type: Optional[str] = None
+    original_created_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

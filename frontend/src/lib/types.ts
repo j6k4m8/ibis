@@ -53,6 +53,7 @@ export type Video = {
   file_size_bytes?: number | null;
   original_filename?: string | null;
   mime_type?: string | null;
+  original_created_at?: string | null;
   created_at: string;
   updated_at: string;
 };

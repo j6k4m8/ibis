@@ -186,6 +186,9 @@ export async function uploadVideo(
   if (title) {
     formData.append('title', title);
   }
+  if (typeof file.lastModified === 'number') {
+    formData.append('last_modified_ms', file.lastModified.toString());
+  }
   return request<Video>(
     '/videos/upload',
     {
@@ -194,6 +197,68 @@ export async function uploadVideo(
     },
     token,
   );
+}
+
+export async function uploadVideoWithProgress(
+  token: string,
+  file: File,
+  title: string | undefined,
+  onProgress: (percent: number) => void,
+): Promise<Video> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (title) {
+      formData.append('title', title);
+    }
+    if (typeof file.lastModified === 'number') {
+      formData.append('last_modified_ms', file.lastModified.toString());
+    }
+
+    const requestUrl = `${baseUrl}/videos/upload`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', requestUrl, true);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('Accept', 'application/json');
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable) {
+        return;
+      }
+      const percent = Math.round((event.loaded / event.total) * 100);
+      onProgress(percent);
+    });
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== XMLHttpRequest.DONE) {
+        return;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as Video);
+        } catch {
+          reject(new ApiError('Invalid response from server.', xhr.status));
+        }
+        return;
+      }
+      let detail = xhr.statusText || 'Upload failed.';
+      try {
+        const body = JSON.parse(xhr.responseText) as { detail?: string };
+        if (body.detail) {
+          detail = body.detail;
+        }
+      } catch {
+        // ignore invalid json
+      }
+      reject(new ApiError(detail, xhr.status));
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError('Network error during upload.', 0));
+    };
+
+    xhr.send(formData);
+  });
 }
 
 export async function updateVideo(

@@ -84,6 +84,7 @@ class Video(Base):
     file_size_bytes: Mapped[Optional[int]] = mapped_column(Integer)
     original_filename: Mapped[Optional[str]] = mapped_column(String(255))
     mime_type: Mapped[Optional[str]] = mapped_column(String(255))
+    original_created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     extra_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

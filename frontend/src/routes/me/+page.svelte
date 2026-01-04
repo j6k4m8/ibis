@@ -14,16 +14,26 @@
   let profile: Me | null = null;
   let loading = true;
   let error = '';
-  let uploading = false;
   let uploadError = '';
-  let uploadTitle = '';
-  let selectedFile: File | null = null;
   let fileInput: HTMLInputElement | null = null;
+  let dragActive = false;
   let jobs: Job[] = [];
   let loadingJobs = false;
   let jobError = '';
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let navPinnedValue = false;
+  let uploadingQueue = false;
+
+  type UploadItem = {
+    id: string;
+    file: File;
+    title: string;
+    status: 'queued' | 'uploading' | 'done' | 'error';
+    progress: number;
+    error?: string;
+  };
+
+  let uploadQueue: UploadItem[] = [];
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -97,51 +107,125 @@
 
   function handleFileChange(event: Event) {
     const target = event.target as HTMLInputElement;
-    const file = target.files?.[0] ?? null;
-    if (!file) {
-      selectedFile = null;
+    const files = target.files ? Array.from(target.files) : [];
+    if (!files.length) {
       return;
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      uploadError = 'File exceeds the 100MB limit.';
-      selectedFile = null;
-      if (fileInput) {
-        fileInput.value = '';
-      }
-      return;
-    }
-    uploadError = '';
-    selectedFile = file;
-    if (!uploadTitle.trim()) {
-      uploadTitle = file.name.replace(/\.[^/.]+$/, '');
+    enqueueFiles(files);
+    if (fileInput) {
+      fileInput.value = '';
     }
   }
 
-  async function uploadVideo() {
-    if (!token || !selectedFile) {
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    dragActive = true;
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    dragActive = false;
+  }
+
+  function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    dragActive = false;
+    const files = event.dataTransfer ? Array.from(event.dataTransfer.files) : [];
+    if (!files.length) {
       return;
     }
-    uploading = true;
-    uploadError = '';
-    try {
-      await api.uploadVideo(token, selectedFile, uploadTitle.trim() || undefined);
-      selectedFile = null;
-      uploadTitle = '';
-      if (fileInput) {
-        fileInput.value = '';
+    enqueueFiles(files);
+  }
+
+  function enqueueFiles(files: File[]) {
+    const incoming: UploadItem[] = [];
+    for (const file of files) {
+      if (!file.type.startsWith('video/')) {
+        continue;
       }
-      await loadProfile(token);
-      await loadJobs(token);
-    } catch (err) {
-      uploadError = err instanceof Error ? err.message : 'Unable to upload video.';
-    } finally {
-      uploading = false;
+      if (file.size > MAX_UPLOAD_BYTES) {
+        uploadError = 'One or more files exceed the 100MB limit.';
+        incoming.push({
+          id: `${file.name}-${Date.now()}`,
+          file,
+          title: defaultTitle(file),
+          status: 'error',
+          progress: 0,
+          error: 'File exceeds the 100MB limit.',
+        });
+        continue;
+      }
+      incoming.push({
+        id: `${file.name}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        file,
+        title: defaultTitle(file),
+        status: 'queued',
+        progress: 0,
+      });
     }
+    if (!incoming.length) {
+      return;
+    }
+    uploadQueue = [...uploadQueue, ...incoming];
+    void processQueue();
+  }
+
+  function defaultTitle(file: File) {
+    return file.name.replace(/\.[^/.]+$/, '');
+  }
+
+  function updateUploadItem(id: string, patch: Partial<UploadItem>) {
+    uploadQueue = uploadQueue.map((item) => (item.id === id ? { ...item, ...patch } : item));
+  }
+
+  async function processQueue() {
+    if (uploadingQueue || !token) {
+      return;
+    }
+    uploadingQueue = true;
+    while (true) {
+      const next = uploadQueue.find((item) => item.status === 'queued');
+      if (!next) {
+        break;
+      }
+      updateUploadItem(next.id, { status: 'uploading', progress: 0, error: undefined });
+      try {
+        await api.uploadVideoWithProgress(
+          token,
+          next.file,
+          next.title.trim() || undefined,
+          (percent) => updateUploadItem(next.id, { progress: percent }),
+        );
+        updateUploadItem(next.id, { status: 'done', progress: 100 });
+        await loadProfile(token);
+        await loadJobs(token);
+      } catch (err) {
+        updateUploadItem(next.id, {
+          status: 'error',
+          error: err instanceof Error ? err.message : 'Unable to upload video.',
+        });
+      }
+    }
+    uploadingQueue = false;
   }
 
   function logout() {
     authStore.clear();
     goto('/login');
+  }
+
+  function updateQueuedTitle(event: Event, itemId: string) {
+    const target = event.currentTarget as HTMLInputElement | null;
+    if (!target) {
+      return;
+    }
+    updateUploadItem(itemId, { title: target.value });
+  }
+
+  function clearCompletedUploads() {
+    uploadQueue = uploadQueue.filter(
+      (item) => item.status !== 'done' && item.status !== 'error',
+    );
   }
 
   function handleNavPinnedChange(event: Event) {
@@ -215,44 +299,85 @@
       <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
         <h2 class="text-lg font-semibold text-slate-900">Upload a video</h2>
         <p class="mt-1 text-xs text-slate-500">Max 100MB per file.</p>
-        <div class="mt-4 space-y-3">
-          <label class="block text-xs text-slate-600">
-            Video file
-            <input
-              bind:this={fileInput}
-              class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-              type="file"
-              accept="video/*"
-              on:change={handleFileChange}
-            />
-          </label>
-          <label class="block text-xs text-slate-600">
-            Title (optional)
-            <input
-              class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-              type="text"
-              bind:value={uploadTitle}
-              placeholder="Give the clip a name"
-            />
-          </label>
+        <div class="mt-4 space-y-4">
+          <div
+            class={`flex flex-col items-center justify-center rounded-3xl border border-dashed px-4 py-8 text-center text-sm transition ${
+              dragActive
+                ? 'border-orange-400 bg-orange-50 text-orange-700'
+                : 'border-slate-200 bg-slate-50 text-slate-500'
+            }`}
+            on:dragover={handleDragOver}
+            on:dragleave={handleDragLeave}
+            on:drop={handleDrop}
+          >
+            <p class="text-sm font-semibold">Drop videos here</p>
+            <p class="mt-1 text-xs text-slate-400">or select multiple files to upload.</p>
+            <label class="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white">
+              Choose files
+              <input
+                bind:this={fileInput}
+                class="hidden"
+                type="file"
+                multiple
+                accept="video/*"
+                on:change={handleFileChange}
+              />
+            </label>
+          </div>
+
           {#if uploadError}
             <div class="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
               {uploadError}
             </div>
           {/if}
-          {#if selectedFile}
-            <div class="text-xs text-slate-500">
-              {selectedFile.name} · {formatBytes(selectedFile.size)}
+
+          {#if uploadQueue.length > 0}
+            <div class="space-y-3">
+              <div class="flex items-center justify-between text-xs text-slate-500">
+                <span>{uploadQueue.length} files in queue</span>
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                  on:click={clearCompletedUploads}
+                >
+                  Clear completed
+                </button>
+              </div>
+              {#each uploadQueue as item}
+                <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="text-sm font-semibold text-slate-900">{item.file.name}</div>
+                    <span class="text-[10px] uppercase tracking-widest text-slate-400">
+                      {item.status}
+                    </span>
+                  </div>
+                  <div class="mt-1 text-[11px] text-slate-400">
+                    {formatBytes(item.file.size)}
+                  </div>
+                  {#if item.status === 'queued'}
+                    <input
+                      class="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                      type="text"
+                      value={item.title}
+                      placeholder="Video title"
+                      on:input={(event) => updateQueuedTitle(event, item.id)}
+                    />
+                  {:else}
+                    <div class="mt-3 text-xs text-slate-500">{item.title}</div>
+                  {/if}
+                  <div class="mt-3 h-2 w-full rounded-full bg-slate-100">
+                    <div
+                      class="h-full rounded-full bg-orange-500 transition-all"
+                      style={`width: ${item.progress}%`}
+                    ></div>
+                  </div>
+                  {#if item.error}
+                    <div class="mt-2 text-[11px] text-red-600">{item.error}</div>
+                  {/if}
+                </div>
+              {/each}
             </div>
           {/if}
-          <button
-            type="button"
-            class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-400 disabled:translate-y-0 disabled:opacity-60"
-            on:click={uploadVideo}
-            disabled={!selectedFile || uploading}
-          >
-            {uploading ? 'Uploading...' : 'Upload video'}
-          </button>
         </div>
       </div>
     </div>

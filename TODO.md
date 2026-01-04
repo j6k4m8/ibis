@@ -39,7 +39,7 @@
     -   [ ] Add background job queue for media processing (local, optional Redis)
     -   [ ] Implement transcoding worker (max 1080p, filesize reduction, configurable)
     -   [ ] Implement transcription worker (Whisper CLI/Docker), store caption chunks with timestamps
-    -   [ ] Add bulk upload dropzone with queue/progress + auto title
+    -   [x] Add bulk upload dropzone with queue/progress + auto title
     -   [x] Render captions under video with karaoke-style highlight + click-to-seek
     -   [ ] Add graceful fallbacks when processing services are disabled
     -   [ ] Support running workers via CLI or Docker/K8s

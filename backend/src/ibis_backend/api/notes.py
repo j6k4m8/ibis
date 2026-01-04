@@ -200,7 +200,7 @@ def list_notes(
         query = query.filter(Note.archived.is_(False))
     if video_id:
         query = query.filter(Note.video_id == video_id)
-    notes = query.order_by(Note.updated_at.desc()).all()
+    notes = query.order_by(Note.created_at.desc()).all()
     return [note_to_read(note) for note in notes]
 
 

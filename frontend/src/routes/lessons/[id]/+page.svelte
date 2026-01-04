@@ -7,6 +7,7 @@
   import { authStore } from '$lib/stores/auth';
   import { renderMarkdown } from '$lib/utils/markdownPreview';
   import NoteDetailView from '$lib/components/NoteDetailView.svelte';
+  import TaskItem from '$lib/components/TaskItem.svelte';
   import type { Lesson, Note, Task, Video } from '$lib/types';
 
   let token: string | null = null;
@@ -293,6 +294,16 @@
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
+  function formatTotalDuration(totalSeconds: number) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+  }
+
   $: notesSorted = [...notes].sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
@@ -310,13 +321,26 @@
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   $: availableNotes = allNotes.filter((note) => !notes.find((item) => item.id === note.id));
   $: availableVideos = allVideos.filter((video) => !videos.find((item) => item.id === video.id));
+  $: containerClass =
+    tab === 'timeline' && viewMode === 'full'
+      ? 'w-full'
+      : 'mx-auto w-full max-w-5xl';
+  $: containerTransition =
+    tab === 'timeline' ? 'transition-[max-width] duration-300 ease-out' : '';
+  $: totalDurationSeconds = videos.reduce(
+    (acc, video) => acc + (video.duration_seconds ?? 0),
+    0,
+  );
+  $: totalDurationLabel =
+    totalDurationSeconds > 0 ? formatTotalDuration(totalDurationSeconds) : '—';
 </script>
 
 <svelte:head>
   <title>{lesson ? `${formatLessonTitle()} · Lessons` : 'Lesson · Ibis'}</title>
 </svelte:head>
 
-<section class="space-y-6">
+<div class={`${containerClass} ${containerTransition}`}>
+  <section class="space-y-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
     <div class="space-y-2">
       <input
@@ -341,6 +365,18 @@
     >
       Back to lessons
     </a>
+  </div>
+
+  <div class="flex flex-wrap gap-3 text-xs text-slate-500">
+    <div class="rounded-full border border-slate-200 bg-white/80 px-3 py-1">
+      {notes.length} note{notes.length === 1 ? '' : 's'}
+    </div>
+    <div class="rounded-full border border-slate-200 bg-white/80 px-3 py-1">
+      {videos.length} video{videos.length === 1 ? '' : 's'}
+    </div>
+    <div class="rounded-full border border-slate-200 bg-white/80 px-3 py-1">
+      Total video time: {totalDurationLabel}
+    </div>
   </div>
 
   <div class="flex flex-wrap gap-2">
@@ -485,9 +521,8 @@
           <div class="absolute left-1/2 top-0 h-full w-px bg-slate-200"></div>
           <div class="space-y-6">
             {#each timelineItems as item}
-              <div class="grid gap-6 lg:grid-cols-[1fr_1fr]">
+              <div class="grid gap-6 grid-cols-[1fr_1fr]">
                 <div class="relative">
-                  <div class="absolute right-0 top-6 h-3 w-3 -translate-y-1/2 rounded-full border border-slate-300 bg-white"></div>
                   <div class="rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm">
                     {#if item.type === 'note'}
                       {#if item.note.video_url}
@@ -600,25 +635,7 @@
           </div>
         {:else}
           {#each tasks as task}
-            <div class="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-xs text-slate-600">
-              <div class="flex items-center justify-between">
-                <label class="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 accent-orange-500"
-                    checked={task.completed}
-                    on:change={() => toggleTask(task)}
-                  />
-                  <span class={task.completed ? 'line-through text-slate-400' : ''}>{task.text}</span>
-                </label>
-                <a href={`/notes/${task.note_id}`} class="text-[11px] text-orange-600 hover:underline">
-                  {task.note_title}
-                </a>
-              </div>
-              <div class="mt-1 text-[11px] text-slate-400">
-                {new Date(task.created_at).toLocaleString()}
-              </div>
-            </div>
+            <TaskItem {task} onToggle={toggleTask} />
           {/each}
         {/if}
       </div>
@@ -719,4 +736,5 @@
       </div>
     {/if}
   {/if}
-</section>
+  </section>
+</div>

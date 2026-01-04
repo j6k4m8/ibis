@@ -118,6 +118,7 @@ export async function createNote(
     video_title?: string;
     video_start_seconds?: number | null;
     video_end_seconds?: number | null;
+    created_at?: string;
   },
 ): Promise<Note> {
   return request<Note>(

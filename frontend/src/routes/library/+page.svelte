@@ -30,6 +30,7 @@
   let uploadFile: File | null = null;
   let uploadProgress = 0;
   let uploadingVideo = false;
+  let inheritVideoCreatedAt = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -82,6 +83,7 @@
     modalOpen = false;
     uploadFile = null;
     uploadProgress = 0;
+    inheritVideoCreatedAt = false;
   }
 
   function handleOverlayClick(event: MouseEvent) {
@@ -111,6 +113,7 @@
         video_url?: string;
         video_id?: string;
         video_title?: string;
+        created_at?: string;
       } = {
         title,
         body,
@@ -139,6 +142,16 @@
         );
         payload.video_id = uploaded.id;
         payload.video_title = uploaded.title ?? title.trim();
+        if (inheritVideoCreatedAt && uploaded.created_at) {
+          payload.created_at = uploaded.created_at;
+        }
+      }
+      if (
+        inheritVideoCreatedAt &&
+        videoSource === 'library' &&
+        selectedLibraryVideo?.created_at
+      ) {
+        payload.created_at = selectedLibraryVideo.created_at;
       }
 
       await api.createNote(token, payload);
@@ -151,6 +164,7 @@
       videoSource = 'youtube';
       uploadFile = null;
       uploadProgress = 0;
+      inheritVideoCreatedAt = false;
       modalOpen = false;
       await loadNotes(token);
       await loadVideos(token);
@@ -209,6 +223,14 @@
   }
 
   $: selectedLibraryVideo = localVideos.find((video) => video.id === selectedVideoId);
+  $: selectedLibraryThumbnail =
+    selectedLibraryVideo && token && selectedLibraryVideo.thumbnail_url
+      ? (() => {
+          const url = new URL(selectedLibraryVideo.thumbnail_url);
+          url.searchParams.set('token', token);
+          return url.toString();
+        })()
+      : selectedLibraryVideo?.thumbnail_url ?? null;
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -449,10 +471,10 @@
             {#if selectedLibraryVideo}
               <div class="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3">
                 <div class="h-16 w-28 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                  {#if selectedLibraryVideo.thumbnail_url}
+                  {#if selectedLibraryThumbnail}
                     <img
                       class="h-full w-full object-cover"
-                      src={selectedLibraryVideo.thumbnail_url}
+                      src={selectedLibraryThumbnail}
                       alt="Video thumbnail"
                     />
                   {:else}
@@ -504,6 +526,15 @@
               </div>
             {/if}
           {/if}
+          <label class="mt-2 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            Use video creation time for note
+            <input
+              type="checkbox"
+              class="h-4 w-4 accent-orange-500"
+              bind:checked={inheritVideoCreatedAt}
+              disabled={videoSource === 'none' || videoSource === 'youtube'}
+            />
+          </label>
           {#if videoSource !== 'none' && videoSource !== 'upload'}
             <label class="block text-sm text-slate-600">
               Video title (optional)

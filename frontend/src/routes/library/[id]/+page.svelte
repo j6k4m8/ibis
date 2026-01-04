@@ -23,7 +23,6 @@
   let linkedNotes: Note[] = [];
   let loadingNotes = false;
   let deleting = false;
-  let editingVideoTitle = false;
   let savingVideoTitle = false;
   let transcriptChunks: TranscriptChunk[] = [];
   let transcriptError = '';
@@ -226,27 +225,23 @@
     if (!token || !video) {
       return;
     }
+    const trimmed = videoTitle.trim() || undefined;
+    if ((video.title ?? undefined) === trimmed) {
+      return;
+    }
     savingVideoTitle = true;
     error = '';
     try {
       const updated = await api.updateVideo(token, video.id, {
-        title: videoTitle.trim() || undefined,
+        title: trimmed,
       });
       video = updated;
       videoTitle = updated.title ?? fallbackTitle(updated);
-      editingVideoTitle = false;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to update video title.';
     } finally {
       savingVideoTitle = false;
     }
-  }
-
-  function cancelVideoTitleEdit() {
-    if (video) {
-      videoTitle = video.title ?? fallbackTitle(video);
-    }
-    editingVideoTitle = false;
   }
 
   async function saveCreatedAt() {
@@ -295,43 +290,18 @@
 <section class="space-y-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
     <div class="space-y-2">
-      {#if editingVideoTitle}
-        <div class="flex flex-wrap items-center gap-2">
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:max-w-md"
-            type="text"
-            bind:value={videoTitle}
-            placeholder="Video title"
-          />
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-            on:click={saveVideoTitle}
-            disabled={savingVideoTitle}
-          >
-            {savingVideoTitle ? 'Saving...' : 'Save'}
-          </button>
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 transition hover:border-slate-300 hover:bg-slate-50"
-            on:click={cancelVideoTitleEdit}
-            disabled={savingVideoTitle}
-          >
-            Cancel
-          </button>
-        </div>
-      {:else}
-        <div class="flex flex-wrap items-center gap-3">
-          <h1 class="text-2xl">{video ? video.title ?? fallbackTitle(video) : 'Video'}</h1>
-          <button
-            type="button"
-            class="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-            on:click={() => (editingVideoTitle = true)}
-          >
-            Rename
-          </button>
-        </div>
-      {/if}
+      <div class="flex flex-wrap items-center gap-3">
+        <input
+          class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-lg font-semibold shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 sm:max-w-md"
+          type="text"
+          bind:value={videoTitle}
+          placeholder="Video title"
+          on:blur={saveVideoTitle}
+        />
+        {#if savingVideoTitle}
+          <span class="text-xs text-slate-400">Saving...</span>
+        {/if}
+      </div>
       {#if video}
         <p class="text-sm text-slate-500">
           Uploaded {new Date(video.created_at).toLocaleString()}

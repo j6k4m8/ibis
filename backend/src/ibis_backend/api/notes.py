@@ -129,11 +129,12 @@ def create_note(
                 )
             )
 
+    created_at = payload.created_at or utcnow()
     note = Note(
         title=payload.title,
         body=payload.body,
         tags=payload.tags,
-        created_at=utcnow(),
+        created_at=created_at,
         updated_at=utcnow(),
         video=video,
         video_start_seconds=payload.video_start_seconds,

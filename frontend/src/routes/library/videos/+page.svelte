@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
 
   import * as api from '$lib/api';
   import { ApiError } from '$lib/api';
@@ -98,6 +98,18 @@
       unitIndex += 1;
     }
     return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+  }
+
+  function resolveThumbnailUrl(video: Video) {
+    if (!video.thumbnail_url) {
+      return null;
+    }
+    if (video.source_type !== 'local' || !token) {
+      return video.thumbnail_url;
+    }
+    const url = new URL(video.thumbnail_url);
+    url.searchParams.set('token', token);
+    return url.toString();
   }
 
   function startRename(video: Video) {
@@ -229,6 +241,8 @@
     if (uploadingQueue || !token) {
       return;
     }
+    const shouldNavigate = uploadQueue.length === 1;
+    let navigated = false;
     uploadingQueue = true;
     while (true) {
       const next = uploadQueue.find((item) => item.status === 'queued');
@@ -237,7 +251,7 @@
       }
       updateUploadItem(next.id, { status: 'uploading', progress: 0, error: undefined });
       try {
-        await api.uploadVideoWithProgress(
+        const uploaded = await api.uploadVideoWithProgress(
           token,
           next.file,
           next.title.trim() || undefined,
@@ -245,6 +259,10 @@
         );
         updateUploadItem(next.id, { status: 'done', progress: 100 });
         await loadVideos(token);
+        if (shouldNavigate && !navigated) {
+          navigated = true;
+          goto(`/library/${uploaded.id}`);
+        }
       } catch (err) {
         updateUploadItem(next.id, {
           status: 'error',
@@ -496,10 +514,10 @@
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="flex items-start gap-4">
               <div class="h-16 w-28 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                {#if video.thumbnail_url}
+                {#if resolveThumbnailUrl(video)}
                   <img
                     class="h-full w-full object-cover"
-                    src={video.thumbnail_url}
+                    src={resolveThumbnailUrl(video)}
                     alt="Video thumbnail"
                   />
                 {:else}

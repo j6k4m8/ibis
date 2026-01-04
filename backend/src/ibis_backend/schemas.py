@@ -128,6 +128,7 @@ class NoteCreate(BaseModel):
     video_title: Optional[str] = Field(None, max_length=255)
     video_start_seconds: Optional[float] = Field(None, ge=0)
     video_end_seconds: Optional[float] = Field(None, ge=0)
+    created_at: Optional[datetime] = None
 
 
 class NoteUpdate(BaseModel):

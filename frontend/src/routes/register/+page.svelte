@@ -40,7 +40,7 @@
     <p class="text-xs uppercase tracking-[0.4em] text-slate-400">New here</p>
     <h1 class="text-3xl sm:text-4xl">Create your Ibis account</h1>
     <p class="text-sm text-slate-600">
-      Start capturing lesson notes with your students and build a searchable history.
+      Start capturing notes with your students and build a searchable history.
     </p>
   </div>
 

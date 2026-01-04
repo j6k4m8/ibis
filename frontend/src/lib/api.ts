@@ -1,4 +1,14 @@
-import type { AuthResponse, Me, Note, NoteVersion, Task, User, Video } from './types';
+import type {
+  AuthResponse,
+  Job,
+  Me,
+  Note,
+  NoteVersion,
+  Task,
+  TranscriptChunk,
+  User,
+  Video,
+} from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:8000';
 const baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE_URL;
@@ -108,6 +118,7 @@ export async function createNote(
     video_title?: string;
     video_start_seconds?: number | null;
     video_end_seconds?: number | null;
+    created_at?: string;
   },
 ): Promise<Note> {
   return request<Note>(
@@ -130,6 +141,7 @@ export async function updateNote(
     archived?: boolean;
     video_start_seconds?: number | null;
     video_end_seconds?: number | null;
+    created_at?: string;
   },
 ): Promise<Note> {
   return request<Note>(
@@ -137,6 +149,16 @@ export async function updateNote(
     {
       method: 'PATCH',
       body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function deleteNote(token: string, noteId: string): Promise<void> {
+  await request<void>(
+    `/notes/${noteId}`,
+    {
+      method: 'DELETE',
     },
     token,
   );
@@ -176,6 +198,9 @@ export async function uploadVideo(
   if (title) {
     formData.append('title', title);
   }
+  if (typeof file.lastModified === 'number') {
+    formData.append('last_modified_ms', file.lastModified.toString());
+  }
   return request<Video>(
     '/videos/upload',
     {
@@ -186,16 +211,88 @@ export async function uploadVideo(
   );
 }
 
+export async function uploadVideoWithProgress(
+  token: string,
+  file: File,
+  title: string | undefined,
+  onProgress: (percent: number) => void,
+): Promise<Video> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (title) {
+      formData.append('title', title);
+    }
+    if (typeof file.lastModified === 'number') {
+      formData.append('last_modified_ms', file.lastModified.toString());
+    }
+
+    const requestUrl = `${baseUrl}/videos/upload`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', requestUrl, true);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('Accept', 'application/json');
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable) {
+        return;
+      }
+      const percent = Math.round((event.loaded / event.total) * 100);
+      onProgress(percent);
+    });
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== XMLHttpRequest.DONE) {
+        return;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as Video);
+        } catch {
+          reject(new ApiError('Invalid response from server.', xhr.status));
+        }
+        return;
+      }
+      let detail = xhr.statusText || 'Upload failed.';
+      try {
+        const body = JSON.parse(xhr.responseText) as { detail?: string };
+        if (body.detail) {
+          detail = body.detail;
+        }
+      } catch {
+        // ignore invalid json
+      }
+      reject(new ApiError(detail, xhr.status));
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError('Network error during upload.', 0));
+    };
+
+    xhr.send(formData);
+  });
+}
+
 export async function updateVideo(
   token: string,
   videoId: string,
-  payload: { title?: string },
+  payload: { title?: string; created_at?: string },
 ): Promise<Video> {
   return request<Video>(
     `/videos/${videoId}`,
     {
       method: 'PATCH',
       body: JSON.stringify(payload),
+    },
+    token,
+  );
+}
+
+export async function deleteVideo(token: string, videoId: string): Promise<void> {
+  await request<void>(
+    `/videos/${videoId}`,
+    {
+      method: 'DELETE',
     },
     token,
   );
@@ -214,6 +311,17 @@ export async function updateTask(
     },
     token,
   );
+}
+
+export async function listJobs(token: string): Promise<Job[]> {
+  return request<Job[]>('/jobs', {}, token);
+}
+
+export async function listTranscriptChunks(
+  token: string,
+  videoId: string,
+): Promise<TranscriptChunk[]> {
+  return request<TranscriptChunk[]>(`/videos/${videoId}/transcript`, {}, token);
 }
 
 export { ApiError };

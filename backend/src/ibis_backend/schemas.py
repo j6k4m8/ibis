@@ -25,9 +25,12 @@ class VideoRead(BaseModel):
     title: Optional[str] = None
     source_type: str
     video_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     file_size_bytes: Optional[int] = None
     original_filename: Optional[str] = None
     mime_type: Optional[str] = None
+    original_created_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -38,6 +41,42 @@ class VideoUpdate(BaseModel):
     """Payload to update a video."""
 
     title: Optional[str] = Field(None, max_length=255)
+    created_at: Optional[datetime] = None
+
+
+class JobRead(BaseModel):
+    """Serialized processing job."""
+
+    id: str
+    video_id: str
+    job_type: str
+    status: str
+    progress: Optional[float] = None
+    detail: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class JobCreate(BaseModel):
+    """Payload to enqueue processing jobs."""
+
+    job_types: list[str] = Field(default_factory=list)
+
+
+class TranscriptChunkRead(BaseModel):
+    """Serialized transcript chunk response."""
+
+    id: str
+    start_seconds: float
+    end_seconds: float
+    text: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class TokenResponse(BaseModel):
@@ -89,6 +128,7 @@ class NoteCreate(BaseModel):
     video_title: Optional[str] = Field(None, max_length=255)
     video_start_seconds: Optional[float] = Field(None, ge=0)
     video_end_seconds: Optional[float] = Field(None, ge=0)
+    created_at: Optional[datetime] = None
 
 
 class NoteUpdate(BaseModel):
@@ -100,6 +140,7 @@ class NoteUpdate(BaseModel):
     archived: Optional[bool] = None
     video_start_seconds: Optional[float] = Field(None, ge=0)
     video_end_seconds: Optional[float] = Field(None, ge=0)
+    created_at: Optional[datetime] = None
 
 
 class NoteRead(BaseModel):

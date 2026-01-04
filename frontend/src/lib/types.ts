@@ -50,9 +50,12 @@ export type Video = {
   title?: string | null;
   source_type: string;
   video_url?: string | null;
+  thumbnail_url?: string | null;
   file_size_bytes?: number | null;
   original_filename?: string | null;
   mime_type?: string | null;
+  original_created_at?: string | null;
+  duration_seconds?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -61,4 +64,25 @@ export type Me = {
   user: User;
   storage_used_bytes: number;
   storage_limit_bytes: number;
+};
+
+export type Job = {
+  id: string;
+  video_id: string;
+  job_type: string;
+  status: string;
+  progress?: number | null;
+  detail?: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+};
+
+export type TranscriptChunk = {
+  id: string;
+  start_seconds: number;
+  end_seconds: number;
+  text: string;
+  created_at: string;
 };

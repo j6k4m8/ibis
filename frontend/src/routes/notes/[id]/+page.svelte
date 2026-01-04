@@ -5,11 +5,12 @@
 
   import * as api from '$lib/api';
   import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
+  import TranscriptScroller from '$lib/components/TranscriptScroller.svelte';
   import { authStore } from '$lib/stores/auth';
   import { renderMarkdown, renderMarkdownPreview } from '$lib/utils/markdownPreview';
   import { parseSegments } from '$lib/utils/segments';
   import { formatTimestamp, parseTimestamp } from '$lib/utils/timestamps';
-  import type { Note, NoteVersion } from '$lib/types';
+  import type { Note, NoteVersion, TranscriptChunk } from '$lib/types';
 
   let note: Note | null = null;
   let versions: NoteVersion[] = [];
@@ -30,6 +31,7 @@
   let youtubePlayer: any = null;
   let youtubeReady = false;
   let youtubeLoopTimer: ReturnType<typeof setInterval> | null = null;
+  let youtubeTranscriptTimer: ReturnType<typeof setInterval> | null = null;
   let youtubeApiPromise: Promise<void> | null = null;
   let youtubePlayerId: string | null = null;
   let segmentLoop: { start: number; end: number } | null = null;
@@ -39,6 +41,14 @@
   let videoEndText = '';
   let videoElement: HTMLVideoElement | null = null;
   let resolvedVideoUrl: string | null = null;
+  let transcriptChunks: TranscriptChunk[] = [];
+  let transcriptError = '';
+  let loadingTranscript = false;
+  let activeTranscriptId: string | null = null;
+  let createdAtInput = '';
+  let updatingCreatedAt = false;
+  let deletingNote = false;
+  let showDeleteModal = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -61,6 +71,10 @@
     if (youtubeLoopTimer) {
       clearInterval(youtubeLoopTimer);
       youtubeLoopTimer = null;
+    }
+    if (youtubeTranscriptTimer) {
+      clearInterval(youtubeTranscriptTimer);
+      youtubeTranscriptTimer = null;
     }
     if (youtubePlayer && typeof youtubePlayer.destroy === 'function') {
       youtubePlayer.destroy();
@@ -158,6 +172,7 @@
             youtubePlayer.pauseVideo();
           }
           updateYouTubeLoopMonitor();
+          updateYouTubeTranscriptMonitor();
         },
       },
     });
@@ -197,6 +212,26 @@
     }, 250);
   }
 
+  function updateYouTubeTranscriptMonitor() {
+    if (youtubeTranscriptTimer) {
+      clearInterval(youtubeTranscriptTimer);
+      youtubeTranscriptTimer = null;
+    }
+    if (!youtubeReady || !youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
+      return;
+    }
+    if (transcriptChunks.length === 0) {
+      return;
+    }
+    youtubeTranscriptTimer = setInterval(() => {
+      if (!youtubePlayer || typeof youtubePlayer.getCurrentTime !== 'function') {
+        return;
+      }
+      const current = youtubePlayer.getCurrentTime();
+      updateActiveTranscript(current);
+    }, 500);
+  }
+
   async function loadNote(activeToken: string, noteId: string) {
     loading = true;
     error = '';
@@ -218,6 +253,13 @@
         videoEndSeconds,
       });
       ready = true;
+      createdAtInput = toDatetimeLocal(note.created_at);
+      if (note.video_id) {
+        await loadTranscript(activeToken, note.video_id);
+      } else {
+        transcriptChunks = [];
+        activeTranscriptId = null;
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load note.';
     } finally {
@@ -230,6 +272,20 @@
       versions = await api.listNoteVersions(activeToken, noteId);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load history.';
+    }
+  }
+
+  async function loadTranscript(activeToken: string, videoId: string) {
+    loadingTranscript = true;
+    transcriptError = '';
+    try {
+      transcriptChunks = await api.listTranscriptChunks(activeToken, videoId);
+      activeTranscriptId = null;
+      updateYouTubeTranscriptMonitor();
+    } catch (err) {
+      transcriptError = err instanceof Error ? err.message : 'Unable to load transcript.';
+    } finally {
+      loadingTranscript = false;
     }
   }
 
@@ -246,8 +302,10 @@
         tags: parseTags(tagsText),
         video_start_seconds: videoStartSeconds,
         video_end_seconds: videoEndSeconds,
+        created_at: fromDatetimeLocal(createdAtInput),
       });
       note = updated;
+      createdAtInput = toDatetimeLocal(updated.created_at);
       lastSavedAt = new Date();
       lastSavedPayload = JSON.stringify({
         title,
@@ -357,6 +415,7 @@
       return;
     }
 
+    updateActiveTranscript(videoElement.currentTime);
     const loopEnd = segmentLoop?.end ?? videoEndSeconds;
     if (loopEnd === null || loopEnd === undefined) {
       return;
@@ -365,6 +424,88 @@
     if (videoElement.currentTime >= loopEnd) {
       videoElement.currentTime = loopStart;
       videoElement.play();
+    }
+  }
+
+  function updateActiveTranscript(currentTime: number) {
+    if (transcriptChunks.length === 0) {
+      activeTranscriptId = null;
+      return;
+    }
+    const current = transcriptChunks.find(
+      (chunk) => currentTime >= chunk.start_seconds && currentTime <= chunk.end_seconds,
+    );
+    activeTranscriptId = current?.id ?? null;
+  }
+
+  function handleTranscriptSeek(seconds: number) {
+    if (!note?.video_url) {
+      return;
+    }
+    const youtubeId = getYouTubeId(note.video_url);
+    if (youtubeId) {
+      if (youtubePlayer && youtubeReady) {
+        youtubePlayer.seekTo(seconds, true);
+        youtubePlayer.playVideo();
+      }
+      return;
+    }
+    if (videoElement) {
+      videoElement.currentTime = seconds;
+      videoElement.play();
+    }
+  }
+
+  async function confirmDelete() {
+    if (!token || !note) {
+      return;
+    }
+    deletingNote = true;
+    error = '';
+    try {
+      await api.deleteNote(token, note.id);
+      goto('/library');
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to delete note.';
+    } finally {
+      deletingNote = false;
+      showDeleteModal = false;
+    }
+  }
+
+  function toDatetimeLocal(value?: string | null) {
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    const offsetMs = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+  }
+
+  function fromDatetimeLocal(value: string) {
+    if (!value) {
+      return undefined;
+    }
+    const date = new Date(value);
+    return date.toISOString();
+  }
+
+  async function saveCreatedAt() {
+    if (!token || !note) {
+      return;
+    }
+    updatingCreatedAt = true;
+    error = '';
+    try {
+      const updated = await api.updateNote(token, note.id, {
+        created_at: fromDatetimeLocal(createdAtInput),
+      });
+      note = updated;
+      createdAtInput = toDatetimeLocal(updated.created_at);
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to update created time.';
+    } finally {
+      updatingCreatedAt = false;
     }
   }
 
@@ -430,6 +571,10 @@
       clearInterval(youtubeLoopTimer);
       youtubeLoopTimer = null;
     }
+    if (youtubeTranscriptTimer) {
+      clearInterval(youtubeTranscriptTimer);
+      youtubeTranscriptTimer = null;
+    }
   }
   $: saveStatus = saving
     ? 'Saving...'
@@ -437,6 +582,12 @@
       ? `Saved ${lastSavedAt.toLocaleTimeString()}`
       : 'Not saved yet';
   $: recentVersions = versions.slice(0, 3);
+  $: transcriptHelperText = youtubeId
+    ? 'Click a line to jump to that timestamp.'
+    : 'Play the video to follow along. Click a line to jump.';
+  $: transcriptEmptyText = note?.video_id
+    ? 'No transcript yet. Transcription runs in the background.'
+    : 'Attach a video to see transcripts.';
 </script>
 
 <svelte:head>
@@ -457,25 +608,16 @@
   <section class="grid gap-8 lg:grid-cols-[2fr_1fr]">
     <div class="space-y-6">
       <div class="rounded-3xl border border-orange-100 bg-white/90 p-6 shadow-xl">
-        <div class="space-y-4">
-          <input
-            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-2xl font-semibold shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-            type="text"
-            bind:value={title}
-            placeholder="Lesson title"
-            aria-label="Lesson title"
-          />
-          <div class="flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
-            <div>Created {new Date(note.created_at).toLocaleDateString()}</div>
-            <div>Updated {new Date(note.updated_at).toLocaleDateString()}</div>
-          </div>
+        <div class="flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
+          <div>Created {new Date(note.created_at).toLocaleDateString()}</div>
+          <div>Updated {new Date(note.updated_at).toLocaleDateString()}</div>
         </div>
 
         <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-        {#if note.video_url}
-          {#if youtubeId}
-            <div class="aspect-video w-full" bind:this={youtubeContainer}></div>
-          {:else}
+          {#if note.video_url}
+            {#if youtubeId}
+              <div class="aspect-video w-full" bind:this={youtubeContainer}></div>
+            {:else}
             <video
               bind:this={videoElement}
               class="aspect-video w-full"
@@ -502,6 +644,15 @@
             >
               {note.video_url}
             </a>
+            {#if note.video_id}
+              <span class="mx-2 text-slate-300">•</span>
+              <a
+                href={`/library/${note.video_id}`}
+                class="text-slate-500 hover:text-orange-600 hover:underline"
+              >
+                View in library
+              </a>
+            {/if}
           </div>
         {:else}
           <div class="mt-3 text-xs text-slate-400">No video link attached yet.</div>
@@ -567,77 +718,123 @@
             {/if}
           </div>
         {/if}
-        <div class="mt-4 space-y-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-4">
-          <label class="block text-sm text-slate-600">
-            Tags
-            <input
-              class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-              type="text"
-              bind:value={tagsText}
-              placeholder="technique, rhythm"
-            />
-          </label>
-          {#if noteTags.length > 0}
-            <div class="flex flex-wrap gap-2">
-              {#each noteTags as tag}
-                <a
-                  href={`/library/tags?tag=${encodeURIComponent(tag)}`}
-                  class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500 hover:border-orange-200 hover:text-orange-700"
-                >
-                  #{tag}
-                </a>
-              {/each}
+        <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+          <div class="space-y-3 rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3">
+            <label class="block text-xs text-slate-600">
+              Tags
+              <input
+                class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                type="text"
+                bind:value={tagsText}
+                placeholder="technique, rhythm"
+              />
+            </label>
+            {#if noteTags.length > 0}
+              <div class="flex flex-wrap gap-2">
+                {#each noteTags as tag}
+                  <a
+                    href={`/library/tags?tag=${encodeURIComponent(tag)}`}
+                    class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500 hover:border-orange-200 hover:text-orange-700"
+                  >
+                    #{tag}
+                  </a>
+                {/each}
+              </div>
+            {/if}
+            <div class="space-y-2">
+              <div class="text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+                Playback range
+              </div>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <label class="block text-[11px] text-slate-500">
+                  Start
+                  <input
+                    class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                    type="text"
+                    bind:value={videoStartText}
+                    placeholder="0:00"
+                    on:blur={() => {
+                      updateVideoRange();
+                      scheduleSave();
+                    }}
+                    on:input={() => {
+                      updateVideoRange();
+                      scheduleSave();
+                    }}
+                  />
+                </label>
+                <label class="block text-[11px] text-slate-500">
+                  End
+                  <input
+                    class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                    type="text"
+                    bind:value={videoEndText}
+                    placeholder="3:30"
+                    on:blur={() => {
+                      updateVideoRange();
+                      scheduleSave();
+                    }}
+                    on:input={() => {
+                      updateVideoRange();
+                      scheduleSave();
+                    }}
+                  />
+                </label>
+              </div>
+              <p class="text-[10px] text-slate-400">
+                Use mm:ss or hh:mm:ss. Leave blank for full video.
+              </p>
             </div>
-          {/if}
+          </div>
           <div class="space-y-3">
-            <div class="text-xs font-semibold uppercase tracking-widest text-slate-500">
-              Playback range
-            </div>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <label class="block text-xs text-slate-500">
-                Start
-                <input
-                  class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-                  type="text"
-                  bind:value={videoStartText}
-                  placeholder="0:00"
-                  on:blur={() => {
-                    updateVideoRange();
-                    scheduleSave();
-                  }}
-                  on:input={() => {
-                    updateVideoRange();
-                    scheduleSave();
-                  }}
-                />
-              </label>
-              <label class="block text-xs text-slate-500">
-                End
-                <input
-                  class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-                  type="text"
-                  bind:value={videoEndText}
-                  placeholder="3:30"
-                  on:blur={() => {
-                    updateVideoRange();
-                    scheduleSave();
-                  }}
-                  on:input={() => {
-                    updateVideoRange();
-                    scheduleSave();
-                  }}
-                />
-              </label>
-            </div>
-            <p class="text-[11px] text-slate-400">
-              Use mm:ss or hh:mm:ss. Leave blank for full video.
-            </p>
+            {#if transcriptError}
+              <div class="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                {transcriptError}
+              </div>
+            {:else if loadingTranscript}
+              <div class="text-xs text-slate-500">Loading transcript...</div>
+            {:else}
+              <TranscriptScroller
+                title="Transcript"
+                helperText={transcriptHelperText}
+                emptyText={transcriptEmptyText}
+                chunks={transcriptChunks}
+                activeId={activeTranscriptId}
+                onSeek={handleTranscriptSeek}
+                compact={true}
+              />
+            {/if}
           </div>
         </div>
       </div>
     </div>
 
     <div class="space-y-6">
+      <div class="space-y-3">
+        <input
+          class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-lg font-semibold shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+          type="text"
+          bind:value={title}
+          placeholder="Note title"
+          aria-label="Note title"
+        />
+        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span class="text-[11px] uppercase tracking-widest text-slate-400">Created</span>
+          <input
+            class="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+            type="datetime-local"
+            bind:value={createdAtInput}
+          />
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+            on:click={saveCreatedAt}
+            disabled={updatingCreatedAt}
+          >
+            {updatingCreatedAt ? 'Saving...' : 'Update'}
+          </button>
+        </div>
+      </div>
       <div class="rounded-3xl border border-slate-200 bg-white/90 px-0 py-4 shadow-xl">
         {#key note.id}
           <MarkdownEditor
@@ -718,6 +915,52 @@
           {/if}
         </div>
       {/if}
+      <div class="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 shadow-xl">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-semibold">Delete note</div>
+            <div class="mt-1 text-xs text-red-600">
+              This permanently removes the note and its history.
+            </div>
+          </div>
+          <button
+            type="button"
+            class="rounded-full border border-red-200 px-4 py-2 text-xs text-red-700 transition hover:border-red-300 hover:bg-red-100"
+            on:click={() => (showDeleteModal = true)}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
   </section>
+{/if}
+
+{#if showDeleteModal}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-10">
+    <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+      <h3 class="text-lg font-semibold text-slate-900">Delete this note?</h3>
+      <p class="mt-2 text-sm text-slate-500">
+        This will permanently remove the note and its history. This action cannot be undone.
+      </p>
+      <div class="mt-6 flex items-center justify-end gap-3">
+        <button
+          type="button"
+          class="rounded-full border border-slate-200 px-4 py-2 text-xs text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+          on:click={() => (showDeleteModal = false)}
+          disabled={deletingNote}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-500 disabled:opacity-60"
+          on:click={confirmDelete}
+          disabled={deletingNote}
+        >
+          {deletingNote ? 'Deleting...' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  </div>
 {/if}

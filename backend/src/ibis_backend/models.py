@@ -84,12 +84,15 @@ class Video(Base):
     file_size_bytes: Mapped[Optional[int]] = mapped_column(Integer)
     original_filename: Mapped[Optional[str]] = mapped_column(String(255))
     mime_type: Mapped[Optional[str]] = mapped_column(String(255))
+    original_created_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    thumbnail_key: Mapped[Optional[str]] = mapped_column(String(1024))
     extra_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
 
     notes: Mapped[list["Note"]] = relationship(back_populates="video")
+    jobs: Mapped[list["ProcessingJob"]] = relationship(back_populates="video")
     user: Mapped[User] = relationship(back_populates="videos")
 
 
@@ -169,3 +172,22 @@ class TranscriptChunk(Base):
     end_seconds: Mapped[float] = mapped_column(Float)
     text: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ProcessingJob(Base):
+    """Background processing job for media."""
+
+    __tablename__ = "processing_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    video_id: Mapped[str] = mapped_column(ForeignKey("videos.id"), nullable=False)
+    job_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="queued")
+    progress: Mapped[Optional[float]] = mapped_column(Float)
+    detail: Mapped[Optional[str]] = mapped_column(String(1024))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+    video: Mapped[Video] = relationship(back_populates="jobs")

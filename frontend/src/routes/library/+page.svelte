@@ -7,6 +7,8 @@
   import { renderMarkdownPreview } from '$lib/utils/markdownPreview';
   import type { Note, Video } from '$lib/types';
 
+  const MAX_UPLOAD_BYTES = 1000 * 1024 * 1024;
+
   let token: string | null = null;
   let notes: Note[] = [];
   let videos: Video[] = [];
@@ -14,7 +16,7 @@
   let error = '';
   let searchQuery = '';
   let selectedTag = 'all';
-  let sortOption: 'updated' | 'created' | 'title' = 'updated';
+  let sortOption: 'updated' | 'created' | 'title' = 'created';
 
   let title = '';
   let videoUrl = '';
@@ -24,7 +26,11 @@
   let body = '';
   let creating = false;
   let modalOpen = false;
-  let videoSource: 'none' | 'youtube' | 'library' = 'youtube';
+  let videoSource: 'none' | 'youtube' | 'library' | 'upload' = 'youtube';
+  let uploadFile: File | null = null;
+  let uploadProgress = 0;
+  let uploadingVideo = false;
+  let inheritVideoCreatedAt = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -75,6 +81,9 @@
 
   function closeModal() {
     modalOpen = false;
+    uploadFile = null;
+    uploadProgress = 0;
+    inheritVideoCreatedAt = false;
   }
 
   function handleOverlayClick(event: MouseEvent) {
@@ -104,6 +113,7 @@
         video_url?: string;
         video_id?: string;
         video_title?: string;
+        created_at?: string;
       } = {
         title,
         body,
@@ -120,6 +130,29 @@
       if (videoSource === 'library' && selectedVideoId) {
         payload.video_id = selectedVideoId;
       }
+      if (videoSource === 'upload' && uploadFile) {
+        uploadingVideo = true;
+        const uploaded = await api.uploadVideoWithProgress(
+          token,
+          uploadFile,
+          title.trim() || undefined,
+          (percent) => {
+            uploadProgress = percent;
+          },
+        );
+        payload.video_id = uploaded.id;
+        payload.video_title = uploaded.title ?? title.trim();
+        if (inheritVideoCreatedAt && uploaded.created_at) {
+          payload.created_at = uploaded.created_at;
+        }
+      }
+      if (
+        inheritVideoCreatedAt &&
+        videoSource === 'library' &&
+        selectedLibraryVideo?.created_at
+      ) {
+        payload.created_at = selectedLibraryVideo.created_at;
+      }
 
       await api.createNote(token, payload);
       title = '';
@@ -129,18 +162,37 @@
       tagsText = '';
       body = '';
       videoSource = 'youtube';
+      uploadFile = null;
+      uploadProgress = 0;
+      inheritVideoCreatedAt = false;
       modalOpen = false;
       await loadNotes(token);
+      await loadVideos(token);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to create note.';
     } finally {
       creating = false;
+      uploadingVideo = false;
     }
+  }
+
+  function handleUploadFileChange(event: Event) {
+    const target = event.currentTarget as HTMLInputElement;
+    const file = target.files?.[0] ?? null;
+    if (file && file.size > MAX_UPLOAD_BYTES) {
+      error = 'File exceeds the 100MB limit.';
+      uploadFile = null;
+      return;
+    }
+    uploadFile = file;
   }
 
   $: availableTags = Array.from(new Set(notes.flatMap((note) => note.tags))).sort();
   $: localVideos = videos.filter((video) => video.source_type === 'local');
-  $: canCreate = title.trim().length > 0 && (videoSource !== 'library' || selectedVideoId);
+  $: canCreate =
+    title.trim().length > 0 &&
+    (videoSource !== 'library' || selectedVideoId) &&
+    (videoSource !== 'upload' || uploadFile);
 
   $: filteredNotes = notes.filter((note) => {
     const query = searchQuery.trim().toLowerCase();
@@ -169,6 +221,16 @@
       videoTitle = selected.title;
     }
   }
+
+  $: selectedLibraryVideo = localVideos.find((video) => video.id === selectedVideoId);
+  $: selectedLibraryThumbnail =
+    selectedLibraryVideo && token && selectedLibraryVideo.thumbnail_url
+      ? (() => {
+          const url = new URL(selectedLibraryVideo.thumbnail_url);
+          url.searchParams.set('token', token);
+          return url.toString();
+        })()
+      : selectedLibraryVideo?.thumbnail_url ?? null;
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -184,7 +246,7 @@
       class="rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-400"
       on:click={openModal}
     >
-      New lesson
+      New note
     </button>
   </div>
 
@@ -237,7 +299,7 @@
       </div>
     {:else if sortedNotes.length === 0}
       <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-        No notes yet. Create your first lesson note to get started.
+        No notes yet. Create your first note to get started.
       </div>
     {:else}
       {#each sortedNotes as note}
@@ -283,10 +345,10 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-10"
     on:click={handleOverlayClick}
   >
-    <div class="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+    <div class="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl">Create a new lesson</h2>
+          <h2 class="text-xl">Create a new note</h2>
           <p class="mt-1 text-sm text-slate-500">Add a title, optional video, and tags.</p>
         </div>
         <button
@@ -298,23 +360,44 @@
         </button>
       </div>
 
-      <form class="mt-6 space-y-4" on:submit|preventDefault={createNote}>
-        <label class="block text-sm text-slate-600">
-          Title
-          <input
-            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-            type="text"
-            bind:value={title}
-            placeholder="Lesson title"
-            required
-          />
-        </label>
+      <form class="mt-6 space-y-6" on:submit|preventDefault={createNote}>
+        <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div class="space-y-4">
+            <label class="block text-sm text-slate-600">
+              Title
+              <input
+                class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                type="text"
+                bind:value={title}
+                placeholder="Note title"
+                required
+              />
+            </label>
 
-        <div class="space-y-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
-          <div class="text-xs font-semibold uppercase tracking-widest text-slate-500">
-            Video source
+            <label class="block text-sm text-slate-600">
+              Tags (comma separated)
+              <input
+                class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                type="text"
+                bind:value={tagsText}
+                placeholder="technique, rhythm, harmony"
+              />
+            </label>
+            <label class="block text-sm text-slate-600">
+              Starter notes
+              <textarea
+                class="mt-2 min-h-[140px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                bind:value={body}
+                placeholder="Write a quick outline or leave blank."
+              ></textarea>
+            </label>
           </div>
-          <div class="grid gap-2 sm:grid-cols-3">
+
+          <div class="space-y-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4">
+            <div class="text-xs font-semibold uppercase tracking-widest text-slate-500">
+              Video source
+            </div>
+            <div class="grid gap-2 sm:grid-cols-2">
             <button
               type="button"
               class={`rounded-2xl border px-3 py-2 text-xs transition ${
@@ -348,6 +431,17 @@
             >
               Video library
             </button>
+            <button
+              type="button"
+              class={`rounded-2xl border px-3 py-2 text-xs transition ${
+                videoSource === 'upload'
+                  ? 'border-orange-400 bg-orange-50 text-orange-700'
+                  : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100'
+              }`}
+              on:click={() => (videoSource = 'upload')}
+            >
+              Upload new
+            </button>
           </div>
           {#if videoSource === 'youtube'}
             <label class="block text-sm text-slate-600">
@@ -374,15 +468,74 @@
                 {/each}
               </select>
             </label>
+            {#if selectedLibraryVideo}
+              <div class="mt-3 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3">
+                <div class="h-16 w-28 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                  {#if selectedLibraryThumbnail}
+                    <img
+                      class="h-full w-full object-cover"
+                      src={selectedLibraryThumbnail}
+                      alt="Video thumbnail"
+                    />
+                  {:else}
+                    <div class="flex h-full items-center justify-center text-[10px] text-slate-400">
+                      No thumbnail
+                    </div>
+                  {/if}
+                </div>
+                <div class="text-xs text-slate-600">
+                  <div class="font-semibold text-slate-900">
+                    {selectedLibraryVideo.title ?? 'Untitled video'}
+                  </div>
+                  <div class="mt-1 text-[11px] text-slate-400">
+                    {selectedLibraryVideo.duration_seconds
+                      ? `${Math.floor(selectedLibraryVideo.duration_seconds / 60)}:${(selectedLibraryVideo.duration_seconds % 60).toString().padStart(2, '0')}`
+                      : 'Duration pending'}
+                  </div>
+                </div>
+              </div>
+            {/if}
             {#if loading}
               <div class="text-xs text-slate-500">Loading your library...</div>
             {:else if localVideos.length === 0}
               <div class="text-xs text-slate-500">
-                No uploads yet. Add a video in <a class="text-orange-600 hover:underline" href="/me">your library</a>.
+                No uploads yet. Add a video in <a class="text-orange-600 hover:underline" href="/library/videos">your library</a>.
+              </div>
+            {/if}
+          {:else if videoSource === 'upload'}
+            <label class="block text-sm text-slate-600">
+              Upload a video
+              <input
+                class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+                type="file"
+                accept="video/*"
+                on:change={handleUploadFileChange}
+              />
+            </label>
+            {#if uploadFile}
+              <div class="text-xs text-slate-500">
+                {uploadFile.name}
+              </div>
+            {/if}
+            {#if uploadingVideo}
+              <div class="mt-2 h-2 w-full rounded-full bg-slate-100">
+                <div
+                  class="h-full rounded-full bg-orange-500 transition-all"
+                  style={`width: ${uploadProgress}%`}
+                ></div>
               </div>
             {/if}
           {/if}
-          {#if videoSource !== 'none'}
+          <label class="mt-2 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            Use video creation time for note
+            <input
+              type="checkbox"
+              class="h-4 w-4 accent-orange-500"
+              bind:checked={inheritVideoCreatedAt}
+              disabled={videoSource === 'none' || videoSource === 'youtube'}
+            />
+          </label>
+          {#if videoSource !== 'none' && videoSource !== 'upload'}
             <label class="block text-sm text-slate-600">
               Video title (optional)
               <input
@@ -394,24 +547,7 @@
             </label>
           {/if}
         </div>
-
-        <label class="block text-sm text-slate-600">
-          Tags (comma separated)
-          <input
-            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-            type="text"
-            bind:value={tagsText}
-            placeholder="technique, rhythm, harmony"
-          />
-        </label>
-        <label class="block text-sm text-slate-600">
-          Starter notes
-          <textarea
-            class="mt-2 min-h-[140px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
-            bind:value={body}
-            placeholder="Write a quick outline or leave blank."
-          ></textarea>
-        </label>
+        </div>
 
         <button
           type="submit"

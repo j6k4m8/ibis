@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import re
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from ibis_backend.dependencies import get_current_user
 from ibis_backend.config import get_settings
 from ibis_backend.db import get_db
-from ibis_backend.models import Note, NoteVersion, User, Video, utcnow
+from ibis_backend.models import Note, NoteVersion, ProcessingJob, Task, User, Video, utcnow
 from ibis_backend.note_versions import upsert_note_version
 from ibis_backend.task_sync import sync_tasks_for_note
 from ibis_backend.schemas import NoteCreate, NoteRead, NoteUpdate, NoteVersionRead
@@ -117,12 +117,24 @@ def create_note(
         )
         db.add(video)
         db.flush()
+        settings = get_settings()
+        if settings.processing_enabled and settings.transcription_enabled:
+            db.add(
+                ProcessingJob(
+                    video_id=video.id,
+                    job_type="transcribe",
+                    status="queued",
+                    created_at=utcnow(),
+                    updated_at=utcnow(),
+                )
+            )
 
+    created_at = payload.created_at or utcnow()
     note = Note(
         title=payload.title,
         body=payload.body,
         tags=payload.tags,
-        created_at=utcnow(),
+        created_at=created_at,
         updated_at=utcnow(),
         video=video,
         video_start_seconds=payload.video_start_seconds,
@@ -232,6 +244,8 @@ def update_note(
         note.video_start_seconds = payload.video_start_seconds
     if "video_end_seconds" in payload.model_fields_set:
         note.video_end_seconds = payload.video_end_seconds
+    if "created_at" in payload.model_fields_set and payload.created_at is not None:
+        note.created_at = payload.created_at
 
     note.updated_at = utcnow()
 
@@ -331,3 +345,28 @@ def get_note_version(
         tags=version.tags or [],
         created_at=version.created_at,
     )
+
+
+@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_note(
+    note_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Delete a note and related data."""
+
+    note = (
+        db.query(Note)
+        .filter(Note.id == note_id)
+        .filter(Note.user_id == current_user.id)
+        .first()
+    )
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    db.query(NoteVersion).filter(NoteVersion.note_id == note.id).delete()
+    db.query(Task).filter(Task.note_id == note.id).delete()
+    db.delete(note)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

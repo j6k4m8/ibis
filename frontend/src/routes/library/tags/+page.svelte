@@ -50,7 +50,7 @@
 <section class="grid gap-8 lg:grid-cols-[0.6fr_1.4fr]">
   <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
     <h2 class="text-2xl">Tags</h2>
-    <p class="mt-2 text-sm text-slate-500">Browse lessons by tag.</p>
+    <p class="mt-2 text-sm text-slate-500">Browse notes by tag.</p>
 
     <div class="mt-4 flex flex-wrap gap-2">
       <a

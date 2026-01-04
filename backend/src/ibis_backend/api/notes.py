@@ -9,7 +9,17 @@ from sqlalchemy.orm import Session
 from ibis_backend.dependencies import get_current_user
 from ibis_backend.config import get_settings
 from ibis_backend.db import get_db
-from ibis_backend.models import Note, NoteVersion, ProcessingJob, Task, User, Video, utcnow
+from ibis_backend.models import (
+    LessonNote,
+    LessonVideo,
+    Note,
+    NoteVersion,
+    ProcessingJob,
+    Task,
+    User,
+    Video,
+    utcnow,
+)
 from ibis_backend.note_versions import upsert_note_version
 from ibis_backend.task_sync import sync_tasks_for_note
 from ibis_backend.schemas import NoteCreate, NoteRead, NoteUpdate, NoteVersionRead
@@ -144,6 +154,22 @@ def create_note(
     db.add(note)
     db.flush()
 
+    if video:
+        lesson_links = db.query(LessonVideo).filter(LessonVideo.video_id == video.id).all()
+        for link in lesson_links:
+            existing = (
+                db.query(LessonNote)
+                .filter(LessonNote.lesson_id == link.lesson_id)
+                .filter(LessonNote.note_id == note.id)
+                .first()
+            )
+            if not existing:
+                db.add(
+                    LessonNote(
+                        lesson_id=link.lesson_id, note_id=note.id, created_at=utcnow()
+                    )
+                )
+
     upsert_note_version(note, db)
     sync_tasks_for_note(note, db)
     db.commit()
@@ -174,7 +200,7 @@ def list_notes(
         query = query.filter(Note.archived.is_(False))
     if video_id:
         query = query.filter(Note.video_id == video_id)
-    notes = query.order_by(Note.updated_at.desc()).all()
+    notes = query.order_by(Note.created_at.desc()).all()
     return [note_to_read(note) for note in notes]
 
 

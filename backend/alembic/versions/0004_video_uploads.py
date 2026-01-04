@@ -35,7 +35,10 @@ def upgrade() -> None:
         with op.batch_alter_table("videos") as batch_op:
             batch_op.add_column(
                 sa.Column(
-                    "user_id", sa.String(length=36), sa.ForeignKey("users.id"), nullable=False
+                    "user_id",
+                    sa.String(length=36),
+                    sa.ForeignKey("users.id", name="fk_videos_user_id"),
+                    nullable=False,
                 )
             )
 

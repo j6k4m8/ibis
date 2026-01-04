@@ -11,6 +11,7 @@ Music note management and annotation app, with support for realtime collaboratio
 - Video playback "crop" ranges
 - Repeat loops from `|:start - end:|` notation, with a clickable list
 - Go to specific timepoints with `==1:23==` highlighted tags
+- Lessons group related notes and videos into timelines with tasks and library tabs
 
 ## Screenshots 
 
@@ -64,6 +65,20 @@ Enable processing with:
 
 ```bash
 IBIS_PROCESSING_ENABLED=true IBIS_TRANSCODE_ENABLED=true IBIS_TRANSCRIPTION_ENABLED=true
+```
+
+Raw uploads are stored under `uploads/raw/{user_id}`. After a successful transcode, the raw file
+is deleted unless you set:
+
+```bash
+IBIS_KEEP_RAW_UPLOADS=true
+```
+
+Upload/storage limits (bytes):
+
+```bash
+IBIS_UPLOAD_MAX_BYTES=104857600
+IBIS_STORAGE_LIMIT_BYTES=5368709120
 ```
 
 Backend:

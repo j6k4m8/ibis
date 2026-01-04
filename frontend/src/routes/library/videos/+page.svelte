@@ -7,13 +7,13 @@ import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth';
   import type { Video } from '$lib/types';
 
-  // TODO: get from server config
-  const MAX_UPLOAD_BYTES = 1000 * 1024 * 1024;
+  const DEFAULT_MAX_UPLOAD_BYTES = 1000 * 1024 * 1024;
 
   let token: string | null = null;
   let videos: Video[] = [];
   let loading = true;
   let error = '';
+  let maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES;
   let filter: 'all' | 'youtube' | 'uploads' | 'external' = 'all';
   let sort: 'recent' | 'title' | 'size' = 'recent';
   let search = '';
@@ -46,6 +46,12 @@ import { goto } from '$app/navigation';
       unsubscribe();
       goto('/login');
       return;
+    }
+    try {
+      const config = await api.getAppConfig();
+      maxUploadBytes = config.upload_max_bytes ?? DEFAULT_MAX_UPLOAD_BYTES;
+    } catch {
+      maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES;
     }
     await loadVideos(state.token);
     return () => unsubscribe();
@@ -202,15 +208,16 @@ import { goto } from '$app/navigation';
       if (!file.type.startsWith('video/')) {
         continue;
       }
-      if (file.size > MAX_UPLOAD_BYTES) {
-        uploadError = 'One or more files exceed the 100MB limit.';
+      if (file.size > maxUploadBytes) {
+        const limitLabel = formatBytes(maxUploadBytes);
+        uploadError = `One or more files exceed the ${limitLabel} limit.`;
         incoming.push({
           id: `${file.name}-${Date.now()}`,
           file,
           title: defaultTitle(file),
           status: 'error',
           progress: 0,
-          error: 'File exceeds the 100MB limit.',
+          error: `File exceeds the ${limitLabel} limit.`,
         });
         continue;
       }
@@ -296,6 +303,14 @@ import { goto } from '$app/navigation';
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
+  function formatVideoCreatedAt(video: Video): string {
+    const timestamp = video.original_created_at ?? video.created_at;
+    return new Date(timestamp).toLocaleString(undefined, {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    });
+  }
+
   $: filteredVideos = videos.filter((video) => {
     if (filter === 'uploads' && video.source_type !== 'local') {
       return false;
@@ -332,7 +347,9 @@ import { goto } from '$app/navigation';
     if (sort === 'size') {
       return (b.file_size_bytes ?? 0) - (a.file_size_bytes ?? 0);
     }
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    const aDate = new Date(a.original_created_at ?? a.created_at).getTime();
+    const bDate = new Date(b.original_created_at ?? b.created_at).getTime();
+    return bDate - aDate;
   });
 
   $: totalUploadBytes = uploadQueue.reduce((acc, item) => acc + item.file.size, 0);
@@ -544,7 +561,7 @@ import { goto } from '$app/navigation';
               {/if}
               <div class="text-xs text-slate-500">
                 {videoLabel(video)} · {formatBytes(video.file_size_bytes)} ·
-                {formatDuration(video.duration_seconds)} · {new Date(video.created_at).toLocaleString()}
+                {formatDuration(video.duration_seconds)} · {formatVideoCreatedAt(video)}
               </div>
               </div>
             </div>

@@ -32,11 +32,13 @@
 
   $: currentPath = $page.url.pathname;
   $: isNotesDetail = currentPath.startsWith('/notes/') && currentPath !== '/notes';
+  $: isLessonsDetail = currentPath.startsWith('/lessons/');
   $: isTasks = currentPath.startsWith('/tasks');
   $: isMe = currentPath.startsWith('/me');
   $: isLibrary = currentPath.startsWith('/library');
   $: navVisible = isPinned || navHover || triggerHover;
-  $: mainClass = isNotesDetail ? 'w-full pt-14' : 'mx-auto w-full max-w-5xl pt-14';
+  $: mainClass =
+    isNotesDetail || isLessonsDetail ? 'w-full pt-14' : 'mx-auto w-full max-w-5xl pt-14';
   $: navClass =
     'flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur';
 </script>
@@ -73,7 +75,13 @@
               Tasks
             </a>
             <a
-              href="/library"
+              href="/lessons"
+              class={`rounded-full px-4 py-2 transition ${currentPath.startsWith('/lessons') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+            >
+              Lessons
+            </a>
+            <a
+              href="/library/lessons"
               class={`rounded-full px-4 py-2 transition ${isLibrary ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
             >
               Library

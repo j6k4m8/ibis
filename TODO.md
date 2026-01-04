@@ -35,21 +35,24 @@
 -   [x] Add delete action for videos (block if notes are attached)
 -   [ ] Add tests coverage for API, workers, and frontend
 -   [ ] Add deployment configs for Fly.io and k8s (containers, env, migrations)
--   [ ] Transcription + transcoding pipeline (Whisper + FFmpeg)
-    -   [ ] Add background job queue for media processing (local, optional Redis)
-    -   [ ] Implement transcoding worker (max 1080p, filesize reduction, configurable)
-    -   [ ] Implement transcription worker (Whisper CLI/Docker), store caption chunks with timestamps
+-   [x] Transcription + transcoding pipeline (Whisper + FFmpeg)
+    -   [x] Add background job queue for media processing (local, optional Redis)
+    -   [x] Implement transcoding worker (max 1080p, filesize reduction, configurable)
+    -   [x] Implement transcription worker (Whisper CLI/Docker), store caption chunks with timestamps
     -   [x] Add bulk upload dropzone with queue/progress + auto title
     -   [x] Add processing queue page
     -   [x] Add thumbnail + duration jobs for uploaded videos
     -   [x] Add YouTube transcription (captions API or yt-dlp + Whisper)
     -   [x] Render captions under video with karaoke-style highlight + click-to-seek
-    -   [ ] Add graceful fallbacks when processing services are disabled
+    -   [x] Add graceful fallbacks when processing services are disabled
     -   [ ] Support running workers via CLI or Docker/K8s
+-   [x] Add lessons (auto-group local uploads within a threshold into note/video timelines)
+-   [x] Build lesson list + detail views (timeline full/birdseye, tasks, lesson library)
+-   [x] Add note-level lesson membership controls
 
 ## Bugs
 
 ## Feature Backlog
 
--   Add optional video transcoding to reduce file sizes after upload (auto or manual).
--   Revisit stable task IDs that do not render in the editor.
+-   [x] Add optional video transcoding to reduce file sizes after upload (auto or manual).
+-   [x] Revisit stable task IDs that do not render in the editor.

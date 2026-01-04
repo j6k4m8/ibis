@@ -9,7 +9,7 @@
       goto('/login');
       return;
     }
-    goto('/library');
+    goto('/library/lessons');
   });
 </script>
 

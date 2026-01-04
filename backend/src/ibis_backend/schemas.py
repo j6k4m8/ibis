@@ -14,6 +14,7 @@ class UserRead(BaseModel):
     id: str
     email: str
     display_name: Optional[str] = None
+    lesson_autogroup_hours: int = 4
 
     model_config = {"from_attributes": True}
 
@@ -102,6 +103,19 @@ class MeRead(BaseModel):
     storage_limit_bytes: int
 
 
+class MeUpdate(BaseModel):
+    """Payload to update current user settings."""
+
+    lesson_autogroup_hours: Optional[int] = Field(None, ge=0, le=72)
+
+
+class AppConfigRead(BaseModel):
+    """Public runtime configuration for clients."""
+
+    upload_max_bytes: int
+    storage_limit_bytes: int
+
+
 class RegisterRequest(BaseModel):
     """Payload to register a new user."""
 
@@ -174,6 +188,42 @@ class NoteVersionRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class LessonRead(BaseModel):
+    """Serialized lesson response."""
+
+    id: str
+    title: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class LessonUpdate(BaseModel):
+    """Payload to update a lesson."""
+
+    title: Optional[str] = Field(None, max_length=255)
+
+
+class LessonCreate(BaseModel):
+    """Payload to create a lesson."""
+
+    title: Optional[str] = Field(None, max_length=255)
+    created_at: Optional[datetime] = None
+
+
+class LessonNoteCreate(BaseModel):
+    """Payload to add a note to a lesson."""
+
+    note_id: str
+
+
+class LessonVideoCreate(BaseModel):
+    """Payload to add a video to a lesson."""
+
+    video_id: str
 
 
 class TaskRead(BaseModel):

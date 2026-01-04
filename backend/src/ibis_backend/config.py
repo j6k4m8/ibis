@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     upload_dir: str = "./uploads"
     upload_max_bytes: int = 1000 * 1024 * 1024  # 1GB
+    keep_raw_uploads: bool = False
     storage_limit_bytes: int = 10 * 1024 * 1024 * 1024  # 10GB
     fetch_video_titles: bool = True
     processing_enabled: bool = False

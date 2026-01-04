@@ -12,6 +12,8 @@
   let loading = true;
   let error = '';
   let navPinnedValue = false;
+  let lessonThreshold = 4;
+  let updatingSettings = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -41,6 +43,7 @@
     error = '';
     try {
       profile = await api.getMe(activeToken);
+      lessonThreshold = profile.user.lesson_autogroup_hours ?? 4;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load account details.';
     } finally {
@@ -73,6 +76,27 @@
       return;
     }
     setNavPinned(target.checked);
+  }
+
+  async function updateLessonThreshold(event: Event) {
+    const target = event.currentTarget as HTMLInputElement | null;
+    if (!target || !token) {
+      return;
+    }
+    const value = Number.parseInt(target.value, 10);
+    if (Number.isNaN(value)) {
+      return;
+    }
+    updatingSettings = true;
+    error = '';
+    try {
+      profile = await api.updateMe(token, { lesson_autogroup_hours: value });
+      lessonThreshold = profile.user.lesson_autogroup_hours ?? value;
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to update settings.';
+    } finally {
+      updatingSettings = false;
+    }
   }
 
   $: storageUsed = profile?.storage_used_bytes ?? 0;
@@ -138,7 +162,7 @@
     <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-slate-900">Video library</h2>
-        <a class="text-xs text-orange-600 hover:underline" href="/library">Open library →</a>
+        <a class="text-xs text-orange-600 hover:underline" href="/library/lessons">Open library →</a>
       </div>
       <p class="mt-3 text-xs text-slate-500">
         Browse, sort, and rename uploads in the dedicated library view.
@@ -164,6 +188,28 @@
       <p class="mt-2 text-[11px] text-slate-400">
         When disabled, hover at the top of the page to reveal the navigation.
       </p>
+    </div>
+
+    <div class="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-slate-900">Lesson grouping</h2>
+      </div>
+      <p class="mt-2 text-xs text-slate-500">
+        Group uploaded videos into lessons when they are created within this window.
+      </p>
+      <label class="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+        Auto-group window (hours)
+        <input
+          type="number"
+          min="0"
+          max="72"
+          step="1"
+          class="ml-4 w-20 rounded-xl border border-slate-200 px-2 py-1 text-sm text-slate-700 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+          value={lessonThreshold}
+          on:change={updateLessonThreshold}
+          disabled={updatingSettings}
+        />
+      </label>
     </div>
   {/if}
 </section>

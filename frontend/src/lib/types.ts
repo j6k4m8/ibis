@@ -2,6 +2,7 @@ export type User = {
   id: string;
   email: string;
   display_name?: string | null;
+  lesson_autogroup_hours?: number;
 };
 
 export type AuthResponse = {
@@ -45,6 +46,13 @@ export type Task = {
   updated_at: string;
 };
 
+export type Lesson = {
+  id: string;
+  title?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Video = {
   id: string;
   title?: string | null;
@@ -63,6 +71,11 @@ export type Video = {
 export type Me = {
   user: User;
   storage_used_bytes: number;
+  storage_limit_bytes: number;
+};
+
+export type AppConfig = {
+  upload_max_bytes: number;
   storage_limit_bytes: number;
 };
 

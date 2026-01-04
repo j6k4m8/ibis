@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
 
   import { authStore } from '$lib/stores/auth';
+  import { hasSeenWelcome } from '$lib/utils/welcome';
 
   let email = '';
   let password = '';
@@ -12,7 +13,9 @@
   onMount(async () => {
     const state = await authStore.init();
     if (state.token) {
-      goto('/notes');
+      const destination =
+        hasSeenWelcome(state.user?.id) ? '/' : '/welcome';
+      goto(destination);
     }
   });
 
@@ -20,8 +23,10 @@
     error = '';
     loading = true;
     try {
-      await authStore.login(email, password);
-      goto('/notes');
+      const state = await authStore.login(email, password);
+      const destination =
+        hasSeenWelcome(state.user?.id) ? '/' : '/welcome';
+      goto(destination);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Login failed.';
     } finally {

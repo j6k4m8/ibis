@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
 
   import * as api from '$lib/api';
+  import TaskItem from '$lib/components/TaskItem.svelte';
   import { authStore } from '$lib/stores/auth';
   import type { Task } from '$lib/types';
 
@@ -144,53 +145,11 @@
       </div>
     {:else}
       {#each filteredTasks as task}
-        <div
-          class={`flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4 transition ${
-            recentlyCompletedIds.has(task.id) && !showCompleted ? 'task-fade' : ''
-          }`}
-        >
-          <div>
-            <div class="flex items-center gap-2 text-sm text-slate-900">
-              <button
-                type="button"
-                  class={`inline-flex h-6 w-6 items-center justify-center rounded-full border transition ${
-                    task.completed
-                      ? 'border-emerald-400 bg-emerald-100 text-emerald-600'
-                      : 'border-slate-300 bg-white text-slate-400 hover:border-orange-300 hover:bg-orange-50'
-                  }`}
-                  on:click={() => toggleTask(task)}
-                  aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
-                >
-                  {task.completed ? '✓' : ''}
-                </button>
-                <span
-                  class={`${
-                    task.completed ? 'text-slate-400 task-complete' : ''
-                  } ${recentlyCompletedIds.has(task.id) ? 'task-strike' : ''}`}
-                >
-                  {task.text || 'Untitled task'}
-                </span>
-              </div>
-              <a
-                href={`/notes/${task.note_id}`}
-                class="mt-1 block text-xs text-slate-500 hover:underline"
-              >
-                {task.note_title}
-              </a>
-            </div>
-            <div class="text-right text-[11px] text-slate-400">
-              <div class="uppercase tracking-widest">{task.completed ? 'Done' : 'Open'}</div>
-              <div>
-                {new Date(task.created_at).toLocaleString(undefined, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </div>
-            </div>
-          </div>
+        <TaskItem
+          {task}
+          onToggle={toggleTask}
+          recentlyCompleted={recentlyCompletedIds.has(task.id) && !showCompleted}
+        />
       {/each}
     {/if}
   </div>

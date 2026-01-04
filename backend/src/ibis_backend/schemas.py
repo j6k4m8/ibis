@@ -25,10 +25,12 @@ class VideoRead(BaseModel):
     title: Optional[str] = None
     source_type: str
     video_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     file_size_bytes: Optional[int] = None
     original_filename: Optional[str] = None
     mime_type: Optional[str] = None
     original_created_at: Optional[datetime] = None
+    duration_seconds: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
@@ -39,6 +41,7 @@ class VideoUpdate(BaseModel):
     """Payload to update a video."""
 
     title: Optional[str] = Field(None, max_length=255)
+    created_at: Optional[datetime] = None
 
 
 class JobRead(BaseModel):
@@ -136,6 +139,7 @@ class NoteUpdate(BaseModel):
     archived: Optional[bool] = None
     video_start_seconds: Optional[float] = Field(None, ge=0)
     video_end_seconds: Optional[float] = Field(None, ge=0)
+    created_at: Optional[datetime] = None
 
 
 class NoteRead(BaseModel):

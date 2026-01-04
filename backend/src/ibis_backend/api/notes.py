@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ibis_backend.dependencies import get_current_user
 from ibis_backend.config import get_settings
 from ibis_backend.db import get_db
-from ibis_backend.models import Note, NoteVersion, User, Video, utcnow
+from ibis_backend.models import Note, NoteVersion, ProcessingJob, User, Video, utcnow
 from ibis_backend.note_versions import upsert_note_version
 from ibis_backend.task_sync import sync_tasks_for_note
 from ibis_backend.schemas import NoteCreate, NoteRead, NoteUpdate, NoteVersionRead
@@ -117,6 +117,17 @@ def create_note(
         )
         db.add(video)
         db.flush()
+        settings = get_settings()
+        if settings.processing_enabled and settings.transcription_enabled:
+            db.add(
+                ProcessingJob(
+                    video_id=video.id,
+                    job_type="transcribe",
+                    status="queued",
+                    created_at=utcnow(),
+                    updated_at=utcnow(),
+                )
+            )
 
     note = Note(
         title=payload.title,
@@ -232,6 +243,8 @@ def update_note(
         note.video_start_seconds = payload.video_start_seconds
     if "video_end_seconds" in payload.model_fields_set:
         note.video_end_seconds = payload.video_end_seconds
+    if "created_at" in payload.model_fields_set and payload.created_at is not None:
+        note.created_at = payload.created_at
 
     note.updated_at = utcnow()
 

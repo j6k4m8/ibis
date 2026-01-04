@@ -45,6 +45,8 @@
   let transcriptError = '';
   let loadingTranscript = false;
   let activeTranscriptId: string | null = null;
+  let createdAtInput = '';
+  let updatingCreatedAt = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -249,6 +251,7 @@
         videoEndSeconds,
       });
       ready = true;
+      createdAtInput = toDatetimeLocal(note.created_at);
       if (note.video_id) {
         await loadTranscript(activeToken, note.video_id);
       } else {
@@ -297,8 +300,10 @@
         tags: parseTags(tagsText),
         video_start_seconds: videoStartSeconds,
         video_end_seconds: videoEndSeconds,
+        created_at: fromDatetimeLocal(createdAtInput),
       });
       note = updated;
+      createdAtInput = toDatetimeLocal(updated.created_at);
       lastSavedAt = new Date();
       lastSavedPayload = JSON.stringify({
         title,
@@ -446,6 +451,42 @@
     if (videoElement) {
       videoElement.currentTime = seconds;
       videoElement.play();
+    }
+  }
+
+  function toDatetimeLocal(value?: string | null) {
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    const offsetMs = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+  }
+
+  function fromDatetimeLocal(value: string) {
+    if (!value) {
+      return undefined;
+    }
+    const date = new Date(value);
+    return date.toISOString();
+  }
+
+  async function saveCreatedAt() {
+    if (!token || !note) {
+      return;
+    }
+    updatingCreatedAt = true;
+    error = '';
+    try {
+      const updated = await api.updateNote(token, note.id, {
+        created_at: fromDatetimeLocal(createdAtInput),
+      });
+      note = updated;
+      createdAtInput = toDatetimeLocal(updated.created_at);
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to update created time.';
+    } finally {
+      updatingCreatedAt = false;
     }
   }
 
@@ -758,6 +799,22 @@
           placeholder="Note title"
           aria-label="Note title"
         />
+        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span class="text-[11px] uppercase tracking-widest text-slate-400">Created</span>
+          <input
+            class="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+            type="datetime-local"
+            bind:value={createdAtInput}
+          />
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+            on:click={saveCreatedAt}
+            disabled={updatingCreatedAt}
+          >
+            {updatingCreatedAt ? 'Saving...' : 'Update'}
+          </button>
+        </div>
       </div>
       <div class="rounded-3xl border border-slate-200 bg-white/90 px-0 py-4 shadow-xl">
         {#key note.id}

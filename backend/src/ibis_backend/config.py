@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     transcode_enabled: bool = True
     transcription_enabled: bool = True
     ffmpeg_path: str = "ffmpeg"
+    ffprobe_path: str = "ffprobe"
+    ytdlp_path: str = "yt-dlp"
     whisper_path: str = "whisper"
     whisper_model: str = "base"
     whisper_language: str = "en"

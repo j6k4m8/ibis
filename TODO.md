@@ -40,6 +40,9 @@
     -   [ ] Implement transcoding worker (max 1080p, filesize reduction, configurable)
     -   [ ] Implement transcription worker (Whisper CLI/Docker), store caption chunks with timestamps
     -   [x] Add bulk upload dropzone with queue/progress + auto title
+    -   [x] Add processing queue page
+    -   [x] Add thumbnail + duration jobs for uploaded videos
+    -   [x] Add YouTube transcription (captions API or yt-dlp + Whisper)
     -   [x] Render captions under video with karaoke-style highlight + click-to-seek
     -   [ ] Add graceful fallbacks when processing services are disabled
     -   [ ] Support running workers via CLI or Docker/K8s

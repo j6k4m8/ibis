@@ -30,23 +30,44 @@ def video_to_read(video: Video) -> VideoRead:
     """
 
     settings = get_settings()
+    thumbnail_url = None
     if video.source_type == "local":
         video_url = f"{settings.public_base_url}/videos/{video.id}/stream"
+        if video.thumbnail_key:
+            thumbnail_url = f"{settings.public_base_url}/videos/{video.id}/thumbnail"
     else:
         video_url = video.source_url
+        if video.source_url:
+            youtube_id = extract_youtube_id(video.source_url)
+            if youtube_id:
+                thumbnail_url = f"https://i.ytimg.com/vi/{youtube_id}/hqdefault.jpg"
 
     return VideoRead(
         id=video.id,
         title=video.title,
         source_type=video.source_type,
         video_url=video_url,
+        thumbnail_url=thumbnail_url,
         file_size_bytes=video.file_size_bytes,
         original_filename=video.original_filename,
         mime_type=video.mime_type,
         original_created_at=video.original_created_at,
+        duration_seconds=video.duration_seconds,
         created_at=video.created_at,
         updated_at=video.updated_at,
     )
+
+
+def extract_youtube_id(url: str) -> str | None:
+    """Extract a YouTube video ID from a URL."""
+
+    if "youtu.be/" in url:
+        return url.split("youtu.be/")[1].split("?")[0]
+    if "youtube.com" in url:
+        parts = url.split("v=")
+        if len(parts) > 1:
+            return parts[1].split("&")[0]
+    return None
 
 
 @router.get("", response_model=list[VideoRead])
@@ -174,6 +195,7 @@ async def upload_video(
         display_title = original_created_at.strftime("%Y-%m-%d %H:%M")
     else:
         display_title = utcnow().strftime("%Y-%m-%d %H:%M")
+    created_at = original_created_at or utcnow()
     video = Video(
         source_type="local",
         source_url=None,
@@ -184,8 +206,8 @@ async def upload_video(
         original_filename=file.filename,
         mime_type=file.content_type or "application/octet-stream",
         original_created_at=original_created_at,
-        created_at=utcnow(),
-        updated_at=utcnow(),
+        created_at=created_at,
+        updated_at=created_at,
         user=current_user,
     )
     db.add(video)
@@ -199,6 +221,7 @@ async def upload_video(
             job_types.append("transcode")
         if settings.transcription_enabled:
             job_types.append("transcribe")
+        job_types.extend(["thumbnail", "duration", "creation_time"])
         if job_types:
             now = utcnow()
             for job_type in job_types:
@@ -247,6 +270,8 @@ def update_video(
 
     if payload.title is not None:
         video.title = payload.title
+    if payload.created_at is not None:
+        video.created_at = payload.created_at
     video.updated_at = utcnow()
     db.commit()
     db.refresh(video)
@@ -291,6 +316,33 @@ def stream_video(
         media_type=video.mime_type or "application/octet-stream",
         filename=video.original_filename,
     )
+
+
+@router.get("/{video_id}/thumbnail")
+def stream_thumbnail(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    """Return a thumbnail image for a locally stored video."""
+
+    video = (
+        db.query(Video)
+        .filter(Video.id == video_id)
+        .filter(Video.user_id == current_user.id)
+        .first()
+    )
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if video.source_type != "local" or not video.thumbnail_key:
+        raise HTTPException(status_code=404, detail="Thumbnail not available")
+
+    settings = get_settings()
+    path = Path(settings.upload_dir).expanduser() / video.thumbnail_key
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Thumbnail not found")
+
+    return FileResponse(path, media_type="image/jpeg", filename=path.name)
 
 
 @router.get("/{video_id}/transcript", response_model=list[TranscriptChunkRead])
@@ -370,5 +422,8 @@ def delete_video(
         settings = get_settings()
         path = Path(settings.upload_dir).expanduser() / video.storage_key
         path.unlink(missing_ok=True)
+        if video.thumbnail_key:
+            thumb_path = Path(settings.upload_dir).expanduser() / video.thumbnail_key
+            thumb_path.unlink(missing_ok=True)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -140,6 +140,7 @@ export async function updateNote(
     archived?: boolean;
     video_start_seconds?: number | null;
     video_end_seconds?: number | null;
+    created_at?: string;
   },
 ): Promise<Note> {
   return request<Note>(
@@ -264,7 +265,7 @@ export async function uploadVideoWithProgress(
 export async function updateVideo(
   token: string,
   videoId: string,
-  payload: { title?: string },
+  payload: { title?: string; created_at?: string },
 ): Promise<Video> {
   return request<Video>(
     `/videos/${videoId}`,

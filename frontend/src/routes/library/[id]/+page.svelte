@@ -30,6 +30,8 @@
   let loadingTranscript = false;
   let activeChunkId: string | null = null;
   let videoElement: HTMLVideoElement | null = null;
+  let createdAtInput = '';
+  let updatingCreatedAt = false;
 
   const unsubscribe = authStore.subscribe((state) => {
     token = state.token;
@@ -69,6 +71,7 @@
       videoTitle = video.title ?? fallbackTitle(video);
       noteTitle = videoTitle;
       resolveVideo(video);
+      createdAtInput = toDatetimeLocal(video.created_at);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unable to load video.';
     } finally {
@@ -246,6 +249,42 @@
     editingVideoTitle = false;
   }
 
+  async function saveCreatedAt() {
+    if (!token || !video) {
+      return;
+    }
+    updatingCreatedAt = true;
+    error = '';
+    try {
+      const updated = await api.updateVideo(token, video.id, {
+        created_at: fromDatetimeLocal(createdAtInput),
+      });
+      video = updated;
+      createdAtInput = toDatetimeLocal(updated.created_at);
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Unable to update created time.';
+    } finally {
+      updatingCreatedAt = false;
+    }
+  }
+
+  function toDatetimeLocal(value?: string | null) {
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    const offsetMs = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+  }
+
+  function fromDatetimeLocal(value: string) {
+    if (!value) {
+      return undefined;
+    }
+    const date = new Date(value);
+    return date.toISOString();
+  }
+
   $: canCreate = noteTitle.trim().length > 0;
 </script>
 
@@ -297,6 +336,22 @@
         <p class="text-sm text-slate-500">
           Uploaded {new Date(video.created_at).toLocaleString()}
         </p>
+        <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <label class="text-[11px] uppercase tracking-widest text-slate-400">Created</label>
+          <input
+            class="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100"
+            type="datetime-local"
+            bind:value={createdAtInput}
+          />
+          <button
+            type="button"
+            class="rounded-full border border-slate-200 px-2 py-1 text-[11px] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+            on:click={saveCreatedAt}
+            disabled={updatingCreatedAt}
+          >
+            {updatingCreatedAt ? 'Saving...' : 'Update'}
+          </button>
+        </div>
       {/if}
     </div>
     <div class="flex items-center gap-3">

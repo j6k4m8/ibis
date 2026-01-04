@@ -234,3 +234,26 @@ def test_upload_uses_last_modified_for_title(
     video = response.json()
     assert video["title"] == expected
     assert video["original_created_at"].startswith(expected[:10])
+
+
+def test_jobs_include_creation_time(
+    upload_client: TestClient, upload_auth_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IBIS_PROCESSING_ENABLED", "true")
+    monkeypatch.setenv("IBIS_TRANSCRIPTION_ENABLED", "false")
+    monkeypatch.setenv("IBIS_TRANSCODE_ENABLED", "false")
+    get_settings.cache_clear()
+
+    payload = b"video-bytes"
+    response = upload_client.post(
+        "/videos/upload",
+        data={"title": "Lesson Clip"},
+        files={"file": ("lesson.mp4", payload, "video/mp4")},
+        headers=upload_auth_headers,
+    )
+    assert response.status_code == 201
+
+    jobs_response = upload_client.get("/jobs", headers=upload_auth_headers)
+    assert jobs_response.status_code == 200
+    job_types = {job["job_type"] for job in jobs_response.json()}
+    assert "creation_time" in job_types

@@ -4,46 +4,44 @@ Music note management and annotation app, with support for realtime collaboratio
 
 ## Features
 
-- Annotate and tag your videos, with versioned note history
-- Supports uploaded videos and YouTube hosted videos
-- Markdown editor with preview and timestamp tokens
-- Notate tasks and keep track of them all in one place, to help you organize your practicing and learning
-- Video playback "crop" ranges
-- Repeat loops from `|:start - end:|` notation, with a clickable list
-- Go to specific timepoints with `==1:23==` highlighted tags
-- Lessons group related notes and videos into timelines with tasks and library tabs
+-   Annotate and tag your videos, with versioned note history
+-   Supports uploaded videos and YouTube hosted videos
+-   Markdown editor with preview and timestamp tokens
+-   Notate tasks and keep track of them all in one place, to help you organize your practicing and learning
+-   Video playback "crop" ranges
+-   Repeat loops from `|:start - end:|` notation, with a clickable list
+-   Go to specific timepoints with `==1:23==` highlighted tags
+-   Lessons group related notes and videos into timelines with tasks and library tabs
+-   (multilingual) transcription of videos
+-   video transcoding to reduce uploaded file sizes
 
-## Screenshots 
+## Screenshots
 
-|                                                                                                                                                                                                                                              |                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Lesson page                                                                                                                                                                                                                                 | ![](https://github.com/user-attachments/assets/e0a0abc6-c869-4a44-8099-1faa9157de08) |
-| Use `==00:23==` to tag timestamps; clicking timestamps scans the video to that moment.                                                                                                                                                      | ![](https://github.com/user-attachments/assets/ec6eb247-2306-4b45-9713-9c50a8d51f19) |
-| You can also use `\|:1:23 - 2:34:\|` to create a "repeat" segment. Clicking this segment opens a "loop" which will replay until you hit the "Stop Loop". This can help you practice segments without having to keep reaching for the mouse. | ![](https://github.com/user-attachments/assets/52427324-753d-4f4f-8827-360c33105c47) |
-| Tasks, marked with the `- [ ] do this` syntax, are centralized on a tasks page:                                                                                                                                                             | ![](https://github.com/user-attachments/assets/63c8cae5-9ef7-45f4-b16a-751292187910) |
-| Tags are centralized on a tags page, with deep-link filtering:                                                                                                                                                                              | ![](https://github.com/user-attachments/assets/33e01d31-3f1e-4d0c-992d-167b6ba899f3) |
-| Notes library page with uploaded or linked videos:                                                                                                                                                                                          | ![](https://github.com/user-attachments/assets/6315c717-f663-4a14-896f-1913a699e943) |
-| User profile page with storage usage meter                                                                                                                                                                                                  | ![](https://github.com/user-attachments/assets/5f474126-63b5-4a28-86cb-93264f52a518) |
+|                                                                                                                                                                                                                                       |                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Note page, showing use of [catl](https://github.com/j6k4m8/catl) for notation                                                                                                                                                         | ![](https://github.com/user-attachments/assets/d372b907-f088-4dd6-ad06-3358906010e5) |
+| Use `==00:23==` to tag timestamps; clicking timestamps scans the video to that moment.                                                                                                                                                | ![](https://github.com/user-attachments/assets/ec6eb247-2306-4b45-9713-9c50a8d51f19) |
+| You can use `\|:1:23 - 2:34:\|` to create "repeat" segments. Clicking this segment opens a "loop" which will replay until you hit the "Stop Loop". This can help you practice segments without having to keep reaching for the mouse. | ![](https://github.com/user-attachments/assets/52427324-753d-4f4f-8827-360c33105c47) |
+| Tasks, marked with the `- [ ] do this` syntax, are centralized on a tasks page:                                                                                                                                                       | ![](https://github.com/user-attachments/assets/63c8cae5-9ef7-45f4-b16a-751292187910) |
+| Tags are centralized on a tags page, with deep-link filtering:                                                                                                                                                                        | ![](https://github.com/user-attachments/assets/33e01d31-3f1e-4d0c-992d-167b6ba899f3) |
+| Notes library page with uploaded or linked videos:                                                                                                                                                                                    | ![](https://github.com/user-attachments/assets/6315c717-f663-4a14-896f-1913a699e943) |
+| User profile page with storage usage meter                                                                                                                                                                                            | ![](https://github.com/user-attachments/assets/5f474126-63b5-4a28-86cb-93264f52a518) |
 
-
-
-## Roadmap 
+## Roadmap
 
 Help welcome :) Please reach out or file an Issue to "claim" a task before contributing to avoid duplicating work!
 
-- [ ] video speed manipulation
-- [ ] optional [multilingual]-transcription of videos
-- [ ] video transcoding to reduce file sizes
-- [ ] realtime multiuser notes collaboration
-- [ ] k8s packaging
-- [ ] (free) public deployment
+-   [ ] video speed manipulation
+-   [ ] realtime multiuser notes collaboration
+-   [ ] k8s packaging
+-   [ ] (free) public deployment
 
 ## Workflow
 
-- Update `TODO.md` as features land.
-- Add major features to `## Features` here.
-- Add tests/docs when they make sense.
-- Commit at meaningful checkpoints with clear messages.
+-   Update `TODO.md` as features land.
+-   Add major features to `## Features` here.
+-   Add tests/docs when they make sense.
+-   Commit at meaningful checkpoints with clear messages.
 
 ## Dev servers
 

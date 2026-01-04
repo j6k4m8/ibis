@@ -21,4 +21,11 @@ describe('renderMarkdownPreview', () => {
     expect(html).toContain('data-segment-start="0:10"');
   });
 
+  it('renders CATL fenced blocks', () => {
+    const input = '```catl\n0A:"When"\n```';
+    const html = renderMarkdownPreview(input, 3);
+    expect(html).toContain('ibis-catl-block');
+    expect(html).toContain('<svg');
+  });
+
 });

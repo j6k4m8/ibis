@@ -32,6 +32,8 @@
 -   [x] Persist tasks with creation timestamps + toggle from editor/tasks page
 -   [x] Add tags navigation page and tag deep-links
 -   [x] Add markdown editor preview with timestamp tokens
+-   [x] Render CATL fenced blocks in markdown preview
+-   [x] Render CATL fenced blocks inside the markdown editor
 -   [x] Add delete action for videos (block if notes are attached)
 -   [ ] Add tests coverage for API, workers, and frontend
 -   [ ] Add deployment configs for Fly.io and k8s (containers, env, migrations)

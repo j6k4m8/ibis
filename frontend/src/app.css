@@ -184,6 +184,29 @@ textarea:-webkit-autofill:focus {
   color: #0f172a;
 }
 
+.ibis-catl-block {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+
+.ibis-catl-block svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.ibis-catl-node {
+  border: 1px dashed #e2e8f0;
+  border-radius: 1rem;
+  background: #f8fafc;
+  padding: 0.75rem;
+}
+
+.ibis-catl-node pre {
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+}
+
 
 .ibis-markdown .ibis-spacer {
   height: 0.75rem;

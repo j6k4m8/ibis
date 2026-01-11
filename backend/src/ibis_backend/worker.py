@@ -58,7 +58,7 @@ def get_video_source_path(video: Video) -> Path | None:
     return Path(get_settings().upload_dir).expanduser() / video.storage_key
 
 
-def process_transcode(video: Video) -> tuple[bool, str | None]:
+def process_transcode(video: Video, db: Session) -> tuple[bool, str | None]:
     """Run FFmpeg to transcode a video."""
 
     settings = get_settings()
@@ -422,7 +422,7 @@ def handle_job(job: ProcessingJob, db: Session) -> None:
         if not settings.transcode_enabled:
             mark_job_finished(job, "skipped", "Transcoding disabled")
             return
-        ok, detail = process_transcode(video)
+        ok, detail = process_transcode(video, db)
         mark_job_finished(job, "succeeded" if ok else "failed", detail)
         return
 

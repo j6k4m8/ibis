@@ -10,6 +10,17 @@ function getLanguage(node: { attrs?: Record<string, unknown> }) {
 function renderPreview(container: HTMLElement, source: string) {
   try {
     container.innerHTML = renderCATL(source);
+    const svg = container.querySelector('svg');
+    if (svg) {
+      svg.removeAttribute('width');
+      svg.removeAttribute('height');
+      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      svg.style.width = 'auto';
+      svg.style.height = 'auto';
+      svg.style.maxWidth = '100%';
+      svg.style.maxHeight = '10em';
+      svg.style.display = 'block';
+    }
   } catch (error) {
     container.textContent = source;
   }

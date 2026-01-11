@@ -37,10 +37,16 @@
   $: isMe = currentPath.startsWith('/me');
   $: isLibrary = currentPath.startsWith('/library');
   $: navVisible = isPinned || navHover || triggerHover;
-  $: mainClass =
-    isNotesDetail || isLessonsDetail ? 'w-full pt-14' : 'mx-auto w-full max-w-5xl pt-14';
-  $: navClass =
-    'flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur';
+  $: mainClass = isPinned
+    ? isNotesDetail || isLessonsDetail
+      ? 'w-full pt-24'
+      : 'mx-auto w-full max-w-5xl pt-24'
+    : isNotesDetail || isLessonsDetail
+      ? 'w-full pt-14'
+      : 'mx-auto w-full max-w-5xl pt-14';
+  $: navClass = isPinned
+    ? 'flex w-full items-center justify-between border-b border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur'
+    : 'flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-6 py-4 shadow-lg shadow-orange-100 backdrop-blur';
 </script>
 
 <div class="min-h-screen px-4 pb-6 sm:px-8">
@@ -52,7 +58,9 @@
         on:mouseleave={() => (triggerHover = false)}
       ></div>
       <div
-        class={`w-full px-4 transition duration-300 sm:px-8 ${
+        class={`w-full transition duration-300 ${
+          isPinned ? '' : 'px-4 sm:px-8'
+        } ${
           navVisible
             ? 'translate-y-0 opacity-100 pointer-events-auto'
             : '-translate-y-full opacity-0 pointer-events-none'

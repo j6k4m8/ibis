@@ -37,6 +37,25 @@ function renderInline(text: string): string {
     );
 }
 
+function normalizeCatlHtml(html: string): string {
+  const match = html.match(/<svg\b[^>]*>/i);
+  if (!match) {
+    return html;
+  }
+  const startTag = match[0];
+  let normalized = startTag
+    .replace(/\swidth="[^"]*"/i, '')
+    .replace(/\sheight="[^"]*"/i, '');
+  if (!/preserveAspectRatio=/i.test(normalized)) {
+    normalized = normalized.replace(
+      /<svg\b/i,
+      '<svg preserveAspectRatio="xMidYMid meet"',
+    );
+  }
+  normalized = normalized.replace(/<svg\b/i, '<svg');
+  return html.replace(startTag, normalized);
+}
+
 export function renderMarkdownPreview(input: string, maxLines = 3): string {
   const lines = input.split('\n');
   let html = '';
@@ -70,7 +89,7 @@ export function renderMarkdownPreview(input: string, maxLines = 3): string {
       const source = blockLines.join('\n');
       let catlHtml = '';
       try {
-        catlHtml = renderCATL(source);
+        catlHtml = normalizeCatlHtml(renderCATL(source));
       } catch {
         catlHtml = `<pre><code>${escapeHtml(source)}</code></pre>`;
       }

@@ -14,6 +14,7 @@ from ibis_backend.api.jobs import router as jobs_router
 from ibis_backend.api.lessons import router as lessons_router
 from ibis_backend.api.me import router as me_router
 from ibis_backend.api.notes import router as notes_router
+from ibis_backend.api.search import router as search_router
 from ibis_backend.api.tasks import router as tasks_router
 from ibis_backend.api.videos import router as videos_router
 from ibis_backend.config import get_settings
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(me_router, prefix="/me", tags=["me"])
     app.include_router(lessons_router, prefix="/lessons", tags=["lessons"])
     app.include_router(notes_router, prefix="/notes", tags=["notes"])
+    app.include_router(search_router, prefix="/search", tags=["search"])
     app.include_router(tasks_router, prefix="/tasks", tags=["tasks"])
     app.include_router(videos_router, prefix="/videos", tags=["videos"])
 

@@ -6,6 +6,7 @@ import type {
   Me,
   Note,
   NoteVersion,
+  SearchResponse,
   Task,
   TranscriptChunk,
   User,
@@ -453,6 +454,14 @@ export async function listTranscriptChunks(
   videoId: string,
 ): Promise<TranscriptChunk[]> {
   return request<TranscriptChunk[]>(`/videos/${videoId}/transcript`, {}, token);
+}
+
+export async function searchLibrary(
+  token: string,
+  query: string,
+): Promise<SearchResponse> {
+  const searchParams = `?query=${encodeURIComponent(query)}`;
+  return request<SearchResponse>(`/search${searchParams}`, {}, token);
 }
 
 export { ApiError };

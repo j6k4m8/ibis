@@ -13,6 +13,7 @@ Music note management and annotation app, with support for realtime collaboratio
 -   Go to specific timepoints with `==1:23==` highlighted tags
 -   Lessons group related notes and videos into timelines with tasks and library tabs
 -   (multilingual) transcription of videos
+-   Library-wide search across notes, lessons, videos, tags, and transcript text
 -   video transcoding to reduce uploaded file sizes
 
 ## Screenshots

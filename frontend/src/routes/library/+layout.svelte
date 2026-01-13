@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
 
   const tabs = [
+    { label: 'Search', href: '/library/search' },
     { label: 'Lessons', href: '/library/lessons' },
     { label: 'Notes', href: '/library/notes' },
     { label: 'Videos', href: '/library/videos' },

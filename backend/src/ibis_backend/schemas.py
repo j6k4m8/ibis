@@ -80,6 +80,19 @@ class TranscriptChunkRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TranscriptMatchRead(BaseModel):
+    """Serialized transcript match response."""
+
+    video_id: str
+    video_title: Optional[str] = None
+    video_source_type: Optional[str] = None
+    start_seconds: float
+    end_seconds: float
+    text: str
+
+    model_config = {"from_attributes": True}
+
+
 class TokenResponse(BaseModel):
     """Token response payload."""
 
@@ -238,6 +251,17 @@ class TaskRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class SearchResponse(BaseModel):
+    """Serialized search response."""
+
+    query: str
+    notes: list[NoteRead]
+    videos: list[VideoRead]
+    lessons: list[LessonRead]
+    tags: list[str]
+    transcript_matches: list[TranscriptMatchRead]
 
 
 class TaskUpdate(BaseModel):

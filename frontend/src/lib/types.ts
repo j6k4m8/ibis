@@ -99,3 +99,21 @@ export type TranscriptChunk = {
   text: string;
   created_at: string;
 };
+
+export type TranscriptMatch = {
+  video_id: string;
+  video_title?: string | null;
+  video_source_type?: string | null;
+  start_seconds: number;
+  end_seconds: number;
+  text: string;
+};
+
+export type SearchResponse = {
+  query: string;
+  notes: Note[];
+  videos: Video[];
+  lessons: Lesson[];
+  tags: string[];
+  transcript_matches: TranscriptMatch[];
+};

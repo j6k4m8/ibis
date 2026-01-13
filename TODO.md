@@ -51,6 +51,7 @@
 -   [x] Add lessons (auto-group local uploads within a threshold into note/video timelines)
 -   [x] Build lesson list + detail views (timeline full/birdseye, tasks, lesson library)
 -   [x] Add note-level lesson membership controls
+-   [x] Add library-wide search with transcript matches
 
 ## Bugs
 

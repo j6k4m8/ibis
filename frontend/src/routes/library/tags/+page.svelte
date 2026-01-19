@@ -5,6 +5,7 @@
 
   import * as api from '$lib/api';
   import { authStore } from '$lib/stores/auth';
+  import { renderMarkdownPreview } from '$lib/utils/markdownPreview';
   import type { Note } from '$lib/types';
 
   let notes: Note[] = [];
@@ -88,9 +89,11 @@
       </div>
     {/if}
 
-    <div class="mt-6 space-y-3">
+    <div class="mt-6 grid gap-4 lg:grid-cols-2">
       {#if loading}
-        <div class="text-sm text-slate-500">Loading notes...</div>
+        <div class="rounded-2xl border border-slate-200 bg-white/70 px-6 py-8 text-sm text-slate-500">
+          Loading notes...
+        </div>
       {:else if filteredNotes.length === 0}
         <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
           No notes found for this tag.
@@ -99,7 +102,7 @@
         {#each filteredNotes as note}
           <a
             href={`/notes/${note.id}`}
-            class="block rounded-2xl border border-transparent bg-slate-50 px-4 py-4 transition hover:border-slate-200 hover:bg-white"
+            class="group block rounded-3xl border border-slate-200 bg-white/90 px-6 py-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
           >
             <div class="flex items-center justify-between text-xs text-slate-500">
               <span>{new Date(note.updated_at).toLocaleString()}</span>
@@ -109,10 +112,25 @@
                 </span>
               {/if}
             </div>
-            <div class="mt-2 text-lg font-semibold text-slate-900">{note.title}</div>
-            <p class="mt-1 text-sm text-slate-600">
-              {note.body || 'No notes yet. Click to start writing.'}
-            </p>
+            <div class="mt-2 text-lg font-semibold text-slate-900 group-hover:text-orange-700">
+              {note.title}
+            </div>
+            {#if note.body}
+              <div class="ibis-markdown mt-1 text-sm text-slate-600">
+                {@html renderMarkdownPreview(note.body, 3)}
+              </div>
+            {:else}
+              <p class="mt-1 text-sm text-slate-600">No notes yet. Click to start writing.</p>
+            {/if}
+            {#if note.tags.length > 0}
+              <div class="mt-3 flex flex-wrap gap-2">
+                {#each note.tags as tag}
+                  <span class="rounded-full border border-slate-200 px-3 py-1 text-[11px] text-slate-500">
+                    #{tag}
+                  </span>
+                {/each}
+              </div>
+            {/if}
           </a>
         {/each}
       {/if}
